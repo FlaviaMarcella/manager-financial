@@ -1,0 +1,21 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jpa:
+    show-sql: false
+  flyway:
+    enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.aws.studentbuilder.finance: INFO
+    org.springframework.security: WARN
+  file:
+    name: /var/log/finance-manager/application.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
+      total-size-cap: 50MB

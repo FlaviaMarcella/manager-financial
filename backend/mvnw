@@ -1,0 +1,18 @@
+#!/bin/sh
+# ----------------------------------------------------------------------------
+# Maven Wrapper Unix Script
+# ----------------------------------------------------------------------------
+
+export MAVEN_PROJECTBASEDIR="${MAVEN_PROJECTBASEDIR:-$(pwd)}"
+WRAPPER_JAR="$MAVEN_PROJECTBASEDIR/.mvn/wrapper/maven-wrapper.jar"
+
+if [ -n "$JAVA_HOME" ]; then
+    JAVACMD="$JAVA_HOME/bin/java"
+else
+    JAVACMD="java"
+fi
+
+exec "$JAVACMD" \
+    -Dmaven.multiModuleProjectDirectory="$MAVEN_PROJECTBASEDIR" \
+    -jar "$WRAPPER_JAR" \
+    "$@"

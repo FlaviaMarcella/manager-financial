@@ -1,0 +1,9 @@
+﻿<app-toast></app-toast>
+
+@if (authService.isAuthenticated()) {
+  <app-navbar></app-navbar>
+}
+
+<main class="main-content" [class.no-nav]="!authService.isAuthenticated()">
+  <router-outlet></router-outlet>
+</main>
