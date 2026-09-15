@@ -87,8 +87,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
           </div>
           <div class="print-meta-grid">
             <div><strong>Status:</strong> {{ r.status }}</div>
-            <div><strong>Data Início:</strong> {{ r.dataInicio | date:'dd/MM/yyyy' }}</div>
-            <div><strong>Data Fim:</strong> {{ r.dataFim | date:'dd/MM/yyyy' }}</div>
+            <div><strong>Data do Evento:</strong> {{ r.data | date:'dd/MM/yyyy' }}</div>
             <div><strong>Total Comprovantes:</strong> {{ r.totalComprovantesAnexados }} de {{ r.totalLancamentos }}</div>
           </div>
         </div>
@@ -99,12 +98,11 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
             <div>
               <span class="badge badge-navy badge-lg">{{ r.status }}</span>
               <h2 class="banner-title">{{ r.eventoNome }}</h2>
-              <p class="banner-desc">{{ r.descricao || 'Sem descrição cadastrada.' }}</p>
             </div>
             <div class="banner-dates">
               <div class="date-item">
-                <span class="date-label">Período:</span>
-                <strong>{{ r.dataInicio | date:'dd/MM/yyyy' }} até {{ r.dataFim | date:'dd/MM/yyyy' }}</strong>
+                <span class="date-label">Data do Evento:</span>
+                <strong>{{ r.data | date:'dd/MM/yyyy' }}</strong>
               </div>
             </div>
           </div>

@@ -138,9 +138,7 @@ export interface DashboardSummary {
 export interface RelatorioEvento {
   eventoId: number;
   eventoNome: string;
-  descricao?: string;
-  dataInicio?: string;
-  dataFim?: string;
+  data?: string;
   status: StatusEvento;
   totalOrcadoUsd: number;
   totalOrcadoBrl: number;

@@ -9,9 +9,7 @@ import java.util.List;
 public record RelatorioEventoDTO(
         Long eventoId,
         String eventoNome,
-        String descricao,
-        LocalDate dataInicio,
-        LocalDate dataFim,
+        LocalDate data,
         StatusEvento status,
         BigDecimal totalOrcadoUsd,
         BigDecimal totalOrcadoBrl,

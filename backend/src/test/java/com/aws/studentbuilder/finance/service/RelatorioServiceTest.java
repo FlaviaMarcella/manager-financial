@@ -53,8 +53,7 @@ class RelatorioServiceTest {
         Evento evento = Evento.builder()
                 .id(1L)
                 .nome("AWS Community Day")
-                .descricao("Encontro técnico da comunidade")
-                .dataInicio(LocalDate.of(2026, 10, 15))
+                .data(LocalDate.of(2026, 10, 15))
                 .status(StatusEvento.PLANEJADO)
                 .build();
 

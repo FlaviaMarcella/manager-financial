@@ -109,9 +109,7 @@ public class RelatorioService {
         return new RelatorioEventoDTO(
                 evento.getId(),
                 evento.getNome(),
-                evento.getDescricao(),
-                evento.getDataInicio(),
-                evento.getDataFim(),
+                evento.getData(),
                 evento.getStatus(),
                 totalOrcadoUsd,
                 totalOrcadoBrl,
@@ -292,9 +290,8 @@ public class RelatorioService {
         writer.write("========================================================================\n\n");
         writer.write("Evento: " + relatorio.eventoNome() + "\n");
         writer.write("Status: " + relatorio.status() + "\n");
-        if (relatorio.dataInicio() != null) {
-            writer.write("Período: " + relatorio.dataInicio().format(DATE_FORMATTER) + " a " +
-                    (relatorio.dataFim() != null ? relatorio.dataFim().format(DATE_FORMATTER) : "N/A") + "\n");
+        if (relatorio.data() != null) {
+            writer.write("Data do Evento: " + relatorio.data().format(DATE_FORMATTER) + "\n");
         }
         writer.write("\n------------------------------------------------------------------------\n");
         writer.write(" BALANÇO FINANCEIRO CONSOLIDADO\n");
