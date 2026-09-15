@@ -68,8 +68,7 @@ services:
     container_name: finance-frontend
     restart: always
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     ports:
       - "80:80"
     deploy:
