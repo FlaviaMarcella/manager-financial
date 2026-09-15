@@ -10,6 +10,7 @@ import {
   ItemOrcamento,
   Lancamento,
   Parceria,
+  RelatorioEvento,
   StatusFinanceiro,
   Usuario
 } from '../models/models';
@@ -199,5 +200,22 @@ export class ApiService {
 
   updateUsuarioRole(id: number, papel: 'ADMIN' | 'VIEWER', ativo?: boolean): Observable<Usuario> {
     return this.http.patch<Usuario>(`${this.baseUrl}/usuarios/${id}`, { papel, ativo });
+  }
+
+  // Relatórios & Prestação de Contas
+  getRelatorioEvento(eventoId: number): Observable<RelatorioEvento> {
+    return this.http.get<RelatorioEvento>(`${this.baseUrl}/relatorios/eventos/${eventoId}`);
+  }
+
+  downloadRelatorioZip(eventoId: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/relatorios/eventos/${eventoId}/zip`, {
+      responseType: 'blob'
+    });
+  }
+
+  downloadRelatorioCsv(eventoId: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/relatorios/eventos/${eventoId}/csv`, {
+      responseType: 'blob'
+    });
   }
 }

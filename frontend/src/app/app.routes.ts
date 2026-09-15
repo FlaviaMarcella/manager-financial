@@ -7,6 +7,7 @@ import { OrcamentoComponent } from './pages/orcamento/orcamento.component';
 import { LancamentosComponent } from './pages/lancamentos/lancamentos.component';
 import { ParceriasComponent } from './pages/parcerias/parcerias.component';
 import { BrindesComponent } from './pages/brindes/brindes.component';
+import { RelatoriosComponent } from './pages/relatorios/relatorios.component';
 import { ConfiguracoesComponent } from './pages/configuracoes/configuracoes.component';
 import { UsuariosComponent } from './pages/usuarios/usuarios.component';
 
@@ -34,6 +35,11 @@ export const routes: Routes = [
     path: 'lancamentos',
     canActivate: [authGuard],
     component: LancamentosComponent
+  },
+  {
+    path: 'relatorios',
+    canActivate: [authGuard],
+    component: RelatoriosComponent
   },
   {
     path: 'parcerias',

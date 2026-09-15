@@ -134,3 +134,25 @@ export interface DashboardSummary {
   orcadoVsRealizadoPorEvento: ChartData[];
   contagemParceriasPorStatus: Record<string, number>;
 }
+
+export interface RelatorioEvento {
+  eventoId: number;
+  eventoNome: string;
+  descricao?: string;
+  dataInicio?: string;
+  dataFim?: string;
+  status: StatusEvento;
+  totalOrcadoUsd: number;
+  totalOrcadoBrl: number;
+  totalRealizadoUsd: number;
+  totalRealizadoBrl: number;
+  saldoRestanteBrl: number;
+  saldoRestanteUsd: number;
+  percentualExecucao: number;
+  totalLancamentos: number;
+  totalComprovantesAnexados: number;
+  itensOrcamento: ItemOrcamento[];
+  lancamentos: Lancamento[];
+  parcerias: Parceria[];
+  brindesUtilizados: Brinde[];
+}

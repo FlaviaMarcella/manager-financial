@@ -28,6 +28,7 @@ import { AuthService } from '../../../core/services/auth.service';
           <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">Dashboard</a>
           <a routerLink="/orcamento" routerLinkActive="active" (click)="closeMenu()">Orçamento</a>
           <a routerLink="/lancamentos" routerLinkActive="active" (click)="closeMenu()">Lançamentos & NFs</a>
+          <a routerLink="/relatorios" routerLinkActive="active" (click)="closeMenu()">Relatórios</a>
           <a routerLink="/parcerias" routerLinkActive="active" (click)="closeMenu()">Parcerias</a>
           <a routerLink="/brindes" routerLinkActive="active" (click)="closeMenu()">Brindes</a>
           
