@@ -875,6 +875,30 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .file-upload-area {
       margin-top: 1rem;
     }
+    @media (max-width: 768px) {
+      .financial-cards-row {
+        grid-template-columns: 1fr;
+      }
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+      .attachment-view-box {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: stretch;
+        text-align: center;
+      }
+      .filter-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: stretch;
+        text-align: center;
+      }
+      .conversion-live-breakdown {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+    }
   `]
 })
 export class LancamentosComponent implements OnInit {

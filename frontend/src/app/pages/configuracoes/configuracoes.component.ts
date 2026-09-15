@@ -666,8 +666,16 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       border-top: 1px solid var(--color-border-light);
     }
 
-    @media (max-width: 960px) {
+    @media (max-width: 1024px) {
       .cambio-dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 768px) {
+      .config-grid {
+        grid-template-columns: 1fr;
+      }
+      .market-stats {
         grid-template-columns: 1fr;
       }
     }

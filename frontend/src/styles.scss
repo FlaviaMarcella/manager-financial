@@ -94,6 +94,7 @@ html, body {
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 /* Tipografia Base */
@@ -111,6 +112,37 @@ h4 { font-size: 1.0rem; }
 
 p, span, label, input, button, select, textarea {
   font-family: var(--font-family-display);
+}
+
+/* Layout Container */
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  color: var(--color-navy);
+  font-weight: 700;
+}
+
+.page-subtitle {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.25rem;
 }
 
 /* Botões */
@@ -200,6 +232,7 @@ p, span, label, input, button, select, textarea {
   border: 1px solid var(--color-border-light);
   padding: 1.5rem;
   transition: box-shadow var(--transition-normal);
+  width: 100%;
 
   &:hover {
     box-shadow: var(--shadow-md);
@@ -216,6 +249,7 @@ p, span, label, input, button, select, textarea {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .badge-amber { background: var(--color-amber-subtle); color: #B36B00; }
@@ -232,6 +266,7 @@ p, span, label, input, button, select, textarea {
   flex-direction: column;
   gap: 0.375rem;
   margin-bottom: 1rem;
+  width: 100%;
 }
 
 .form-label {
@@ -239,6 +274,14 @@ p, span, label, input, button, select, textarea {
   font-weight: 700;
   color: var(--color-navy);
 }
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.flex-1 { flex: 1; }
 
 .form-control, .form-select {
   width: 100%;
@@ -261,12 +304,19 @@ p, span, label, input, button, select, textarea {
   }
 }
 
-/* Tabelas */
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Tabelas e Containers de Rolagem */
 .table-container {
   overflow-x: auto;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-white);
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .custom-table {
@@ -274,6 +324,7 @@ p, span, label, input, button, select, textarea {
   border-collapse: collapse;
   text-align: left;
   font-size: 0.875rem;
+  min-width: 680px;
 
   thead {
     background-color: #F8FAFC;
@@ -286,6 +337,7 @@ p, span, label, input, button, select, textarea {
       text-transform: uppercase;
       font-size: 0.75rem;
       letter-spacing: 0.05em;
+      white-space: nowrap;
     }
   }
 
@@ -311,6 +363,14 @@ p, span, label, input, button, select, textarea {
   }
 }
 
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
 /* Modais */
 .modal-backdrop {
   position: fixed;
@@ -318,13 +378,14 @@ p, span, label, input, button, select, textarea {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(21, 29, 37, 0.65);
+  background-color: rgba(21, 29, 37, 0.7);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
+  overflow-y: auto;
 }
 
 .modal-content {
@@ -338,6 +399,11 @@ p, span, label, input, button, select, textarea {
   padding: 1.75rem;
   position: relative;
   animation: modalIn 0.2s ease-out;
+  margin: auto;
+}
+
+.modal-content.modal-large {
+  max-width: 780px;
 }
 
 @keyframes modalIn {
@@ -365,4 +431,80 @@ p, span, label, input, button, select, textarea {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #9aa5b1;
+}
+
+/* =========================================================
+   MEDIA QUERIES DE RESPONSIVIDADE (Telas Grandes, Médias, Pequenas e Mobile)
+   ========================================================= */
+
+/* Tablets e Laptops Médios (<= 992px) */
+@media (max-width: 992px) {
+  .page-container {
+    padding: 1.5rem 1rem;
+    gap: 1.25rem;
+  }
+  .page-title {
+    font-size: 1.55rem;
+  }
+  .card {
+    padding: 1.25rem;
+  }
+}
+
+/* Tablets Pequenos e Celulares em Paisagem (<= 768px) */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .form-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .modal-content {
+    padding: 1.25rem 1rem;
+    max-height: 94vh;
+  }
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+    button {
+      width: 100%;
+    }
+  }
+}
+
+/* Celulares (<= 576px) */
+@media (max-width: 576px) {
+  .page-container {
+    padding: 1rem 0.65rem;
+    gap: 1rem;
+  }
+  .page-title {
+    font-size: 1.35rem;
+  }
+  .page-subtitle {
+    font-size: 0.8rem;
+  }
+  .card {
+    padding: 1rem 0.85rem;
+    border-radius: var(--radius-sm);
+  }
+  .custom-table th, .custom-table td {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+  }
+  .btn {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.825rem;
+  }
+  .btn-sm {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.75rem;
+  }
 }

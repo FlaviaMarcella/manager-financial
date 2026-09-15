@@ -999,12 +999,33 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       border-radius: var(--radius-sm);
     }
 
+    @media (max-width: 960px) {
+      .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .summary-pills {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      }
+    }
     @media (max-width: 768px) {
       .transfer-grid {
         grid-template-columns: 1fr;
       }
       .arrow-circle {
         transform: rotate(90deg);
+      }
+      .financial-cards-row {
+        grid-template-columns: 1fr;
+      }
+      .transfer-summary-box {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+      }
+      .details-grid {
+        grid-template-columns: 1fr;
       }
     }
   `]

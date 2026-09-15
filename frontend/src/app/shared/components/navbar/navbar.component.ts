@@ -12,29 +12,46 @@ import { AuthService } from '../../../core/services/auth.service';
       <div class="navbar-container">
         <!-- Logo e Título -->
         <div class="navbar-brand">
-          <a routerLink="/dashboard" class="brand-link">
+          <a routerLink="/dashboard" class="brand-link" (click)="closeMenu()">
             <img src="/assets/brandmarks/AWS Student Builder Group_RGB_Brandmark_White.png" 
                  alt="AWS Student Builder Group" 
-                 class="brand-logo">
+                 class="brand-logo"
+                 (error)="handleLogoError($event)">
             <div class="brand-text">
-              <span class="brand-title">Gestão Financeira</span>
-              <span class="brand-subtitle">AWS Student Builder Group</span>
+              <span class="brand-title">AWS SBG Finance</span>
+              <span class="brand-subtitle">Gestão Financeira</span>
             </div>
           </a>
         </div>
 
-        <!-- Menu Desktop -->
+        <!-- Menu Desktop & Mobile -->
         <nav class="navbar-nav" [class.mobile-open]="mobileMenuOpen()">
-          <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">Dashboard</a>
-          <a routerLink="/orcamento" routerLinkActive="active" (click)="closeMenu()">Orçamento</a>
-          <a routerLink="/lancamentos" routerLinkActive="active" (click)="closeMenu()">Lançamentos & NFs</a>
-          <a routerLink="/relatorios" routerLinkActive="active" (click)="closeMenu()">Relatórios</a>
-          <a routerLink="/parcerias" routerLinkActive="active" (click)="closeMenu()">Parcerias</a>
-          <a routerLink="/brindes" routerLinkActive="active" (click)="closeMenu()">Brindes</a>
+          <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">
+            <span class="nav-icon">📊</span> Dashboard
+          </a>
+          <a routerLink="/orcamento" routerLinkActive="active" (click)="closeMenu()">
+            <span class="nav-icon">💰</span> Orçamento
+          </a>
+          <a routerLink="/lancamentos" routerLinkActive="active" (click)="closeMenu()">
+            <span class="nav-icon">🧾</span> Lançamentos & NFs
+          </a>
+          <a routerLink="/relatorios" routerLinkActive="active" (click)="closeMenu()">
+            <span class="nav-icon">📁</span> Relatórios
+          </a>
+          <a routerLink="/parcerias" routerLinkActive="active" (click)="closeMenu()">
+            <span class="nav-icon">🤝</span> Parcerias
+          </a>
+          <a routerLink="/brindes" routerLinkActive="active" (click)="closeMenu()">
+            <span class="nav-icon">🎁</span> Brindes
+          </a>
           
           @if (authService.isAdmin()) {
-            <a routerLink="/configuracoes" routerLinkActive="active" (click)="closeMenu()">Configurações</a>
-            <a routerLink="/usuarios" routerLinkActive="active" (click)="closeMenu()">Usuários</a>
+            <a routerLink="/configuracoes" routerLinkActive="active" (click)="closeMenu()">
+              <span class="nav-icon">⚙️</span> Configurações
+            </a>
+            <a routerLink="/usuarios" routerLinkActive="active" (click)="closeMenu()">
+              <span class="nav-icon">👥</span> Usuários
+            </a>
           }
         </nav>
 
@@ -42,7 +59,7 @@ import { AuthService } from '../../../core/services/auth.service';
         <div class="navbar-actions">
           @if (authService.currentUser(); as user) {
             <div class="user-badge-container">
-              <span class="user-name">{{ user.nome }}</span>
+              <span class="user-name" [title]="user.nome">{{ user.nome }}</span>
               <span class="badge" [class.badge-amber]="user.papel === 'ADMIN'" [class.badge-blue]="user.papel === 'VIEWER'">
                 {{ user.papel }}
               </span>
@@ -53,13 +70,18 @@ import { AuthService } from '../../../core/services/auth.service';
           }
 
           <!-- Botão Mobile Menu -->
-          <button class="mobile-toggle" (click)="toggleMenu()" aria-label="Abrir menu">
-            <span class="hamburger-bar"></span>
-            <span class="hamburger-bar"></span>
-            <span class="hamburger-bar"></span>
+          <button class="mobile-toggle" (click)="toggleMenu()" aria-label="Abrir menu de navegação">
+            <span class="hamburger-bar" [class.open-1]="mobileMenuOpen()"></span>
+            <span class="hamburger-bar" [class.open-2]="mobileMenuOpen()"></span>
+            <span class="hamburger-bar" [class.open-3]="mobileMenuOpen()"></span>
           </button>
         </div>
       </div>
+      
+      <!-- Backdrop móvel para fechar o menu ao clicar fora -->
+      @if (mobileMenuOpen()) {
+        <div class="menu-backdrop" (click)="closeMenu()"></div>
+      }
     </header>
   `,
   styles: [`
@@ -69,31 +91,35 @@ import { AuthService } from '../../../core/services/auth.service';
       border-bottom: 1px solid var(--color-navy-subtle);
       position: sticky;
       top: 0;
-      z-index: 100;
+      z-index: 500;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      width: 100%;
     }
     .navbar-container {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 0.75rem 1.5rem;
+      padding: 0.65rem 1.25rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 1.5rem;
+      gap: 1rem;
+      position: relative;
+      z-index: 502;
     }
     .navbar-brand {
       display: flex;
       align-items: center;
+      flex-shrink: 0;
     }
     .brand-link {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.75rem;
       text-decoration: none;
       color: inherit;
     }
     .brand-logo {
-      height: 38px;
+      height: 34px;
       width: auto;
       object-fit: contain;
     }
@@ -106,26 +132,34 @@ import { AuthService } from '../../../core/services/auth.service';
       font-weight: 700;
       color: var(--color-white);
       line-height: 1.1;
+      white-space: nowrap;
     }
     .brand-subtitle {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       color: var(--color-amber);
       font-weight: 600;
       letter-spacing: 0.05em;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     .navbar-nav {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.25rem;
+      flex-wrap: wrap;
       a {
-        color: #A0AEC0;
+        color: #CBD5E1;
         text-decoration: none;
-        padding: 0.5rem 0.85rem;
+        padding: 0.45rem 0.65rem;
         border-radius: var(--radius-sm);
-        font-size: 0.875rem;
+        font-size: 0.85rem;
         font-weight: 600;
         transition: all var(--transition-fast);
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        white-space: nowrap;
+        .nav-icon { font-size: 0.85rem; }
         &:hover {
           color: var(--color-white);
           background-color: rgba(255, 255, 255, 0.08);
@@ -140,22 +174,23 @@ import { AuthService } from '../../../core/services/auth.service';
     .navbar-actions {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.65rem;
+      flex-shrink: 0;
     }
     .user-badge-container {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 0.35rem 0.75rem;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 0.3rem 0.65rem;
       border-radius: var(--radius-pill);
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .user-name {
-      font-size: 0.825rem;
+      font-size: 0.8rem;
       font-weight: 600;
       color: var(--color-white);
-      max-width: 140px;
+      max-width: 120px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -163,6 +198,8 @@ import { AuthService } from '../../../core/services/auth.service';
     .btn-logout {
       border-color: rgba(255, 255, 255, 0.2);
       color: #E2E8F0;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.8rem;
       &:hover {
         background-color: rgba(255, 77, 79, 0.2);
         border-color: var(--color-danger);
@@ -172,25 +209,45 @@ import { AuthService } from '../../../core/services/auth.service';
     .mobile-toggle {
       display: none;
       flex-direction: column;
-      gap: 4px;
+      justify-content: center;
+      gap: 5px;
       background: transparent;
       border: none;
       cursor: pointer;
-      padding: 0.5rem;
+      padding: 0.4rem;
+      width: 36px;
+      height: 36px;
       .hamburger-bar {
         display: block;
         width: 22px;
         height: 2px;
         background-color: var(--color-white);
         border-radius: 2px;
+        transition: all 0.2s ease;
       }
+      .open-1 { transform: translateY(7px) rotate(45deg); }
+      .open-2 { opacity: 0; }
+      .open-3 { transform: translateY(-7px) rotate(-45deg); }
     }
-    @media (max-width: 992px) {
-      .mobile-toggle {
-        display: flex;
-      }
+    .menu-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 501;
+    }
+
+    @media (max-width: 1100px) {
       .user-name {
         display: none;
+      }
+    }
+
+    @media (max-width: 960px) {
+      .mobile-toggle {
+        display: flex;
       }
       .navbar-nav {
         display: none;
@@ -203,13 +260,28 @@ import { AuthService } from '../../../core/services/auth.service';
         align-items: stretch;
         padding: 1rem;
         border-bottom: 2px solid var(--color-amber);
-        box-shadow: var(--shadow-lg);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        z-index: 503;
+        gap: 0.5rem;
         &.mobile-open {
           display: flex;
         }
         a {
           padding: 0.75rem 1rem;
+          font-size: 0.95rem;
         }
+      }
+    }
+
+    @media (max-width: 480px) {
+      .navbar-container {
+        padding: 0.5rem 0.75rem;
+      }
+      .brand-title {
+        font-size: 0.95rem;
+      }
+      .brand-logo {
+        height: 28px;
       }
     }
   `]
@@ -231,7 +303,6 @@ export class NavbarComponent {
   }
 
   handleLogoError(event: Event) {
-    // Fallback to PNG if SVG is not found
     const target = event.target as HTMLImageElement;
     target.src = '/assets/brandmarks/AWS Student Builder Group_RGB_Brandmark_White.png';
   }

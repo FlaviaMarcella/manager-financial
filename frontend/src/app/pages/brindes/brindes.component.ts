@@ -476,6 +476,22 @@ import { Brinde, Evento, Parceria } from '../../core/models/models';
       color: #334155;
       line-height: 1.5;
     }
+    @media (max-width: 768px) {
+      .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .summary-pills {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      }
+      .stock-cards-row {
+        grid-template-columns: 1fr;
+      }
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   `]
 })
 export class BrindesComponent implements OnInit {

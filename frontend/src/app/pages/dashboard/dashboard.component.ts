@@ -330,9 +330,30 @@ import Chart from 'chart.js/auto';
       font-weight: 800;
       color: var(--color-navy);
     }
-    @media (max-width: 600px) {
+    @media (max-width: 960px) {
       .charts-grid {
         grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 768px) {
+      .kpi-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .header-badges-group {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .exchange-rate-badge {
+        justify-content: center;
+      }
+    }
+    @media (max-width: 480px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+      .status-cards-row {
+        grid-template-columns: 1fr 1fr;
       }
     }
   `]

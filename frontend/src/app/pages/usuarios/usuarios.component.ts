@@ -294,6 +294,29 @@ type FilterTab = 'PENDENTES' | 'ATIVOS' | 'TODOS';
       gap: 0.5rem;
       border-bottom: 2px solid var(--color-border);
       padding-bottom: 0.25rem;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 640px) {
+      .tab-btn {
+        flex: 1 1 auto;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        justify-content: center;
+      }
+      .pending-alert-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        button { width: 100%; }
+      }
+      .kpi-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    @media (max-width: 420px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
     }
     .tab-btn {
       background: none;

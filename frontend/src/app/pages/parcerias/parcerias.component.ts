@@ -439,6 +439,24 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       color: #334155;
       line-height: 1.5;
     }
+    @media (max-width: 768px) {
+      .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .summary-pills {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 440px) {
+      .summary-pills {
+        grid-template-columns: 1fr;
+      }
+    }
   `]
 })
 export class ParceriasComponent implements OnInit {
