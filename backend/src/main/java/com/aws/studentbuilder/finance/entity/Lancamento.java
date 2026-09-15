@@ -39,6 +39,9 @@ public class Lancamento {
     @Column(name = "valor_brl", nullable = false, precision = 15, scale = 2)
     private BigDecimal valorBrl = BigDecimal.ZERO;
 
+    @Column(name = "taxa_cambio_usada", precision = 10, scale = 4)
+    private BigDecimal taxaCambioUsada = new BigDecimal("5.5000");
+
     @Column(name = "forma_pagamento", nullable = false, length = 100)
     private String formaPagamento;
 
@@ -66,8 +69,9 @@ public class Lancamento {
 
     public Lancamento(Long id, LocalDate data, String descricao, String fornecedor, String numeroNotaFiscal,
                       Evento evento, Categoria categoria, BigDecimal valorUsd, BigDecimal valorBrl,
-                      String formaPagamento, StatusFinanceiro status, Usuario responsavel,
-                      String anexoUrl, String anexoNomeOriginal, String observacoes, OffsetDateTime criadoEm) {
+                      BigDecimal taxaCambioUsada, String formaPagamento, StatusFinanceiro status,
+                      Usuario responsavel, String anexoUrl, String anexoNomeOriginal, String observacoes,
+                      OffsetDateTime criadoEm) {
         this.id = id;
         this.data = data;
         this.descricao = descricao;
@@ -77,6 +81,7 @@ public class Lancamento {
         this.categoria = categoria;
         this.valorUsd = valorUsd != null ? valorUsd : BigDecimal.ZERO;
         this.valorBrl = valorBrl != null ? valorBrl : BigDecimal.ZERO;
+        this.taxaCambioUsada = taxaCambioUsada != null ? taxaCambioUsada : new BigDecimal("5.5000");
         this.formaPagamento = formaPagamento;
         this.status = status;
         this.responsavel = responsavel;
@@ -98,6 +103,7 @@ public class Lancamento {
         private Categoria categoria;
         private BigDecimal valorUsd = BigDecimal.ZERO;
         private BigDecimal valorBrl = BigDecimal.ZERO;
+        private BigDecimal taxaCambioUsada = new BigDecimal("5.5000");
         private String formaPagamento;
         private StatusFinanceiro status;
         private Usuario responsavel;
@@ -115,6 +121,7 @@ public class Lancamento {
         public Builder categoria(Categoria categoria) { this.categoria = categoria; return this; }
         public Builder valorUsd(BigDecimal valorUsd) { this.valorUsd = valorUsd; return this; }
         public Builder valorBrl(BigDecimal valorBrl) { this.valorBrl = valorBrl; return this; }
+        public Builder taxaCambioUsada(BigDecimal taxaCambioUsada) { this.taxaCambioUsada = taxaCambioUsada; return this; }
         public Builder formaPagamento(String formaPagamento) { this.formaPagamento = formaPagamento; return this; }
         public Builder status(StatusFinanceiro status) { this.status = status; return this; }
         public Builder responsavel(Usuario responsavel) { this.responsavel = responsavel; return this; }
@@ -123,7 +130,7 @@ public class Lancamento {
         public Builder observacoes(String observacoes) { this.observacoes = observacoes; return this; }
         public Builder criadoEm(OffsetDateTime criadoEm) { this.criadoEm = criadoEm; return this; }
         public Lancamento build() {
-            return new Lancamento(id, data, descricao, fornecedor, numeroNotaFiscal, evento, categoria, valorUsd, valorBrl, formaPagamento, status, responsavel, anexoUrl, anexoNomeOriginal, observacoes, criadoEm);
+            return new Lancamento(id, data, descricao, fornecedor, numeroNotaFiscal, evento, categoria, valorUsd, valorBrl, taxaCambioUsada, formaPagamento, status, responsavel, anexoUrl, anexoNomeOriginal, observacoes, criadoEm);
         }
     }
 
@@ -145,6 +152,8 @@ public class Lancamento {
     public void setValorUsd(BigDecimal valorUsd) { this.valorUsd = valorUsd; }
     public BigDecimal getValorBrl() { return valorBrl; }
     public void setValorBrl(BigDecimal valorBrl) { this.valorBrl = valorBrl; }
+    public BigDecimal getTaxaCambioUsada() { return taxaCambioUsada; }
+    public void setTaxaCambioUsada(BigDecimal taxaCambioUsada) { this.taxaCambioUsada = taxaCambioUsada; }
     public String getFormaPagamento() { return formaPagamento; }
     public void setFormaPagamento(String formaPagamento) { this.formaPagamento = formaPagamento; }
     public StatusFinanceiro getStatus() { return status; }

@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal, ViewChild, ElementRef, AfterViewInit
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
-import { DashboardSummary } from '../../core/models/models';
+import { CotacaoDolar, DashboardSummary } from '../../core/models/models';
 import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
 import Chart from 'chart.js/auto';
 
@@ -17,9 +17,19 @@ import Chart from 'chart.js/auto';
           <h1 class="page-title">Painel Financeiro</h1>
           <p class="page-subtitle">Visão consolidada do orçamento, despesas e patrocínios do grupo</p>
         </div>
-        <div class="header-badge">
+        <div class="header-badges-group">
+          @if (cotacaoMercado()?.cotacaoOficial) {
+            <span class="exchange-rate-badge market-badge" title="Cotação comercial oficial do dia">
+              <span class="dot dot-blue"></span> Dólar Hoje: <strong>R$ {{ cotacaoMercado()?.cotacaoOficial | number:'1.4-4' }}</strong>
+              @if (cotacaoMercado()?.pctChange !== undefined) {
+                <small class="var-tag" [class.var-up]="(cotacaoMercado()?.pctChange || 0) >= 0" [class.var-down]="(cotacaoMercado()?.pctChange || 0) < 0">
+                  {{ (cotacaoMercado()?.pctChange || 0) >= 0 ? '+' : '' }}{{ cotacaoMercado()?.pctChange | number:'1.2-2' }}%
+                </small>
+              }
+            </span>
+          }
           <span class="exchange-rate-badge">
-            <span class="dot"></span> Câmbio atual: <strong>1 USD = {{ summary()?.taxaCambioAtual | currencyBrl }}</strong>
+            <span class="dot dot-mint"></span> Câmbio Sistema: <strong>1 USD = {{ summary()?.taxaCambioAtual | currencyBrl }}</strong>
           </span>
         </div>
       </div>
@@ -168,23 +178,42 @@ import Chart from 'chart.js/auto';
       color: var(--color-text-secondary);
       margin-top: 0.25rem;
     }
+    .header-badges-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
     .exchange-rate-badge {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
       background: #FFFFFF;
       border: 1px solid var(--color-border);
-      padding: 0.5rem 1rem;
+      padding: 0.45rem 0.85rem;
       border-radius: var(--radius-pill);
-      font-size: 0.85rem;
+      font-size: 0.825rem;
       color: var(--color-navy);
       box-shadow: var(--shadow-sm);
       .dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background-color: var(--color-mint);
+        &.dot-mint { background-color: var(--color-mint); }
+        &.dot-blue { background-color: var(--color-blue); }
       }
+      &.market-badge {
+        background: #F8FAFC;
+        border-color: #CBD5E1;
+      }
+    }
+    .var-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.1rem 0.35rem;
+      border-radius: var(--radius-sm);
+      &.var-up { background: #DCFCE7; color: #15803D; }
+      &.var-down { background: #FEE2E2; color: #B91C1C; }
     }
     .kpi-grid {
       display: grid;
@@ -312,6 +341,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   private apiService = inject(ApiService);
 
   summary = signal<DashboardSummary | null>(null);
+  cotacaoMercado = signal<CotacaoDolar | null>(null);
 
   @ViewChild('categoriaChartCanvas') categoriaCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('eventoChartCanvas') eventoCanvas!: ElementRef<HTMLCanvasElement>;
@@ -321,6 +351,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     this.loadData();
+    this.loadCotacao();
   }
 
   ngAfterViewInit() {
@@ -333,6 +364,13 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         this.summary.set(data);
         setTimeout(() => this.renderCharts(data), 50);
       }
+    });
+  }
+
+  loadCotacao() {
+    this.apiService.getCotacaoDolarAtual().subscribe({
+      next: (c) => this.cotacaoMercado.set(c),
+      error: () => {}
     });
   }
 

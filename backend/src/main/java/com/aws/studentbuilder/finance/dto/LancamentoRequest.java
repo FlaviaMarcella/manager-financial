@@ -30,6 +30,8 @@ public class LancamentoRequest {
     @PositiveOrZero(message = "Valor em BRL deve ser maior ou igual a zero")
     private BigDecimal valorBrl;
 
+    private BigDecimal taxaCambioUsada;
+
     @NotBlank(message = "Forma de pagamento é obrigatória")
     private String formaPagamento;
 
@@ -39,8 +41,8 @@ public class LancamentoRequest {
     public LancamentoRequest() {}
 
     public LancamentoRequest(LocalDate data, String descricao, String fornecedor, String numeroNotaFiscal,
-                             Long eventoId, Long categoriaId, BigDecimal valorUsd, BigDecimal valorBrl,
-                             String formaPagamento, Long statusId, String observacoes) {
+                              Long eventoId, Long categoriaId, BigDecimal valorUsd, BigDecimal valorBrl,
+                              BigDecimal taxaCambioUsada, String formaPagamento, Long statusId, String observacoes) {
         this.data = data;
         this.descricao = descricao;
         this.fornecedor = fornecedor;
@@ -49,6 +51,7 @@ public class LancamentoRequest {
         this.categoriaId = categoriaId;
         this.valorUsd = valorUsd;
         this.valorBrl = valorBrl;
+        this.taxaCambioUsada = taxaCambioUsada;
         this.formaPagamento = formaPagamento;
         this.statusId = statusId;
         this.observacoes = observacoes;
@@ -65,6 +68,7 @@ public class LancamentoRequest {
         private Long categoriaId;
         private BigDecimal valorUsd;
         private BigDecimal valorBrl;
+        private BigDecimal taxaCambioUsada;
         private String formaPagamento;
         private Long statusId;
         private String observacoes;
@@ -77,11 +81,12 @@ public class LancamentoRequest {
         public Builder categoriaId(Long categoriaId) { this.categoriaId = categoriaId; return this; }
         public Builder valorUsd(BigDecimal valorUsd) { this.valorUsd = valorUsd; return this; }
         public Builder valorBrl(BigDecimal valorBrl) { this.valorBrl = valorBrl; return this; }
+        public Builder taxaCambioUsada(BigDecimal taxaCambioUsada) { this.taxaCambioUsada = taxaCambioUsada; return this; }
         public Builder formaPagamento(String formaPagamento) { this.formaPagamento = formaPagamento; return this; }
         public Builder statusId(Long statusId) { this.statusId = statusId; return this; }
         public Builder observacoes(String observacoes) { this.observacoes = observacoes; return this; }
         public LancamentoRequest build() {
-            return new LancamentoRequest(data, descricao, fornecedor, numeroNotaFiscal, eventoId, categoriaId, valorUsd, valorBrl, formaPagamento, statusId, observacoes);
+            return new LancamentoRequest(data, descricao, fornecedor, numeroNotaFiscal, eventoId, categoriaId, valorUsd, valorBrl, taxaCambioUsada, formaPagamento, statusId, observacoes);
         }
     }
 
@@ -101,6 +106,8 @@ public class LancamentoRequest {
     public void setValorUsd(BigDecimal valorUsd) { this.valorUsd = valorUsd; }
     public BigDecimal getValorBrl() { return valorBrl; }
     public void setValorBrl(BigDecimal valorBrl) { this.valorBrl = valorBrl; }
+    public BigDecimal getTaxaCambioUsada() { return taxaCambioUsada; }
+    public void setTaxaCambioUsada(BigDecimal taxaCambioUsada) { this.taxaCambioUsada = taxaCambioUsada; }
     public String getFormaPagamento() { return formaPagamento; }
     public void setFormaPagamento(String formaPagamento) { this.formaPagamento = formaPagamento; }
     public Long getStatusId() { return statusId; }

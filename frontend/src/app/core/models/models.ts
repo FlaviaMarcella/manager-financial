@@ -77,6 +77,7 @@ export interface Lancamento {
   categoriaNome?: string;
   valorUsd?: number;
   valorBrl: number;
+  taxaCambioUsada?: number;
   formaPagamento: string;
   statusId?: number;
   statusNome?: string;
@@ -114,6 +115,7 @@ export interface Brinde {
   eventoDistribuicaoId?: number;
   eventoDistribuicaoNome?: string;
   dataDistribuicao?: string;
+  descricao?: string;
   observacoes?: string;
   criadoEm?: string;
 }
@@ -185,3 +187,13 @@ export interface CategoriaSaldoDisponivel {
   saldoDisponivelBrl: number;
 }
 
+
+export interface CotacaoDolar {
+  cotacaoOficial: number;
+  maximo: number;
+  minimo: number;
+  variacao: number;
+  pctChange: number;
+  dataHoraCotacao: string;
+  fonte: string;
+}

@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   Brinde,
+  CotacaoDolar,
   Categoria,
   CategoriaSaldoDisponivel,
   ConfiguracaoGlobal,
@@ -81,13 +82,25 @@ export class ApiService {
     return this.http.delete<void>(`${this.baseUrl}/status-financeiro/${id}`);
   }
 
-  // Configurações
+  // Configurações & Câmbio
   getConfiguracao(): Observable<ConfiguracaoGlobal> {
     return this.http.get<ConfiguracaoGlobal>(`${this.baseUrl}/config`);
   }
 
   updateConfiguracao(config: ConfiguracaoGlobal): Observable<ConfiguracaoGlobal> {
     return this.http.put<ConfiguracaoGlobal>(`${this.baseUrl}/config`, config);
+  }
+
+  getCotacaoDolarAtual(): Observable<CotacaoDolar> {
+    return this.http.get<CotacaoDolar>(`${this.baseUrl}/config/cotacao-atual`);
+  }
+
+  sincronizarCotacaoDolar(spreadPercentual?: number): Observable<ConfiguracaoGlobal> {
+    let params = new HttpParams();
+    if (spreadPercentual !== undefined && spreadPercentual !== null) {
+      params = params.set('spreadPercentual', spreadPercentual.toString());
+    }
+    return this.http.post<ConfiguracaoGlobal>(`${this.baseUrl}/config/sincronizar-cotacao`, {}, { params });
   }
 
   // Orçamento

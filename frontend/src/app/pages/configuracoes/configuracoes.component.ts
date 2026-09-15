@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
-import { Categoria, ConfiguracaoGlobal, Evento, StatusEvento, StatusFinanceiro } from '../../core/models/models';
+import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro } from '../../core/models/models';
 import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
 
 @Component({
@@ -16,37 +16,129 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       <div class="page-header">
         <div>
           <h1 class="page-title">Configurações do Sistema</h1>
-          <p class="page-subtitle">Parâmetros globais de câmbio, categorias, status e cadastro de eventos</p>
+          <p class="page-subtitle">Parâmetros globais de câmbio USD/BRL, cotação do dia, categorias, status e eventos</p>
         </div>
       </div>
 
       <div class="config-grid">
-        <!-- 1. Taxa de Câmbio USD -> BRL -->
-        <div class="card config-card">
+        <!-- 1. Painel de Câmbio USD -> BRL & Cotação em Tempo Real -->
+        <div class="card config-card full-width cambio-card">
           <div class="card-header">
-            <h3>Taxa de Câmbio (USD → BRL)</h3>
-            <span class="badge badge-amber">Câmbio Oficial</span>
+            <div>
+              <h3>Cotação do Dólar & Política Cambial (USD → BRL)</h3>
+              <p class="card-subtitle">Monitore o câmbio de mercado e defina a taxa operacional com desconto de taxas bancárias/spread</p>
+            </div>
+            <span class="badge badge-amber">Câmbio Multi-Moeda</span>
           </div>
-          <p class="section-desc">Esta taxa é aplicada automaticamente na conversão de linhas de orçamento e despesas em dólar.</p>
 
-          <form (ngSubmit)="saveTaxaCambio()" class="cambio-form">
-            <div class="form-group">
-              <label class="form-label">Taxa 1 USD em BRL (R$) *</label>
-              <div class="input-prefix-group">
-                <span class="prefix">R$</span>
-                <input type="number" step="0.0001" min="0.0001" class="form-control" [(ngModel)]="taxaInput" name="taxaInput" required placeholder="5.5000">
+          <div class="cambio-dashboard-grid">
+            <!-- Coluna 1: Cotação Comercial de Mercado (Hoje) -->
+            <div class="cambio-box market-box">
+              <div class="box-top">
+                <span class="box-tag">🌐 Mercado Oficial Hoje</span>
+                <button type="button" class="btn btn-sm btn-outline btn-refresh" (click)="loadCotacaoMercado()" [disabled]="isLoadingCotacao()">
+                  {{ isLoadingCotacao() ? 'Carregando...' : '🔄 Sincronizar' }}
+                </button>
+              </div>
+
+              <div class="market-rate-display">
+                <span class="currency-symbol">US$ 1 =</span>
+                <span class="rate-value">R$ {{ cotacaoMercado()?.cotacaoOficial | number:'1.4-4' }}</span>
+                @if (cotacaoMercado()?.pctChange !== undefined) {
+                  <span class="var-badge" [class.var-pos]="(cotacaoMercado()?.pctChange || 0) >= 0" [class.var-neg]="(cotacaoMercado()?.pctChange || 0) < 0">
+                    {{ (cotacaoMercado()?.pctChange || 0) >= 0 ? '▲ +' : '▼ ' }}{{ cotacaoMercado()?.pctChange | number:'1.2-2' }}%
+                  </span>
+                }
+              </div>
+
+              <div class="market-stats">
+                <div class="stat-item">
+                  <span class="stat-label">Máxima do Dia</span>
+                  <span class="stat-val">R$ {{ cotacaoMercado()?.maximo | number:'1.4-4' }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Mínima do Dia</span>
+                  <span class="stat-val">R$ {{ cotacaoMercado()?.minimo | number:'1.4-4' }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Fonte</span>
+                  <span class="stat-val text-truncate">{{ cotacaoMercado()?.fonte || 'Mercado Financeiro' }}</span>
+                </div>
+              </div>
+
+              <div class="market-footer">
+                <small>Última cotação: <strong>{{ cotacaoMercado()?.dataHoraCotacao || 'Hoje' }}</strong></small>
+                <button type="button" class="btn-copy-rate" (click)="copiarCotacaoMercado()">
+                  Copiar para Taxa do Sistema ➔
+                </button>
               </div>
             </div>
 
-            <div class="cambio-meta">
-              <span>Última atualização: <strong>{{ config()?.atualizadoEm | date:'dd/MM/yyyy HH:mm' }}</strong></span>
-              <span>Por: <strong>{{ config()?.atualizadoPor || 'sistema' }}</strong></span>
+            <!-- Coluna 2: Simulador de Spread / Desconto de Taxas de Conversão -->
+            <div class="cambio-box spread-box">
+              <div class="box-top">
+                <span class="box-tag tag-purple">🧮 Simulador de Taxas / Spread</span>
+              </div>
+              <p class="box-desc">
+                Ao converter dólares para reais, bancos e corretoras cobram IOF e taxas de conversão (spread). O dólar líquido creditado tende a ser menor que a cotação oficial.
+              </p>
+
+              <div class="spread-presets">
+                <span class="preset-label">Desconto estimado:</span>
+                <button type="button" class="btn-preset" [class.active]="spreadPercentual === 0" (click)="aplicarSpread(0)">0% (Bruto)</button>
+                <button type="button" class="btn-preset" [class.active]="spreadPercentual === 2.0" (click)="aplicarSpread(2.0)">-2.0%</button>
+                <button type="button" class="btn-preset" [class.active]="spreadPercentual === 3.0" (click)="aplicarSpread(3.0)">-3.0% (Padrão)</button>
+                <button type="button" class="btn-preset" [class.active]="spreadPercentual === 3.5" (click)="aplicarSpread(3.5)">-3.5% (IOF+Spread)</button>
+              </div>
+
+              <div class="simulacao-result" *ngIf="cotacaoMercado()?.cotacaoOficial">
+                <div class="result-row">
+                  <span>Cotação Bruta de Mercado:</span>
+                  <strong>R$ {{ cotacaoMercado()?.cotacaoOficial | number:'1.4-4' }}</strong>
+                </div>
+                <div class="result-row text-danger">
+                  <span>Desconto de Taxas ({{ spreadPercentual }}%):</span>
+                  <strong>- R$ {{ ((cotacaoMercado()?.cotacaoOficial || 0) * (spreadPercentual / 100)) | number:'1.4-4' }}</strong>
+                </div>
+                <div class="result-row result-total text-mint">
+                  <span>Taxa Líquida Estimada:</span>
+                  <strong>R$ {{ calcularTaxaLiquida() | number:'1.4-4' }}</strong>
+                </div>
+              </div>
+
+              <button type="button" class="btn btn-sm btn-outline btn-apply-sim" (click)="aplicarTaxaSimulada()">
+                Usar Taxa Líquida no Sistema
+              </button>
             </div>
 
-            <button type="submit" class="btn btn-primary" [disabled]="!taxaInput || taxaInput <= 0">
-              Salvar Nova Taxa
-            </button>
-          </form>
+            <!-- Coluna 3: Taxa Operacional Efetiva Ativa no Sistema -->
+            <div class="cambio-box active-box">
+              <div class="box-top">
+                <span class="box-tag tag-mint">⚙️ Taxa Efetiva no Sistema</span>
+                <span class="badge badge-mint">Ativa</span>
+              </div>
+
+              <form (ngSubmit)="saveTaxaCambio()" class="cambio-form">
+                <div class="form-group">
+                  <label class="form-label">Taxa Operacional 1 USD (R$) *</label>
+                  <div class="input-prefix-group">
+                    <span class="prefix">R$</span>
+                    <input type="number" step="0.0001" min="0.0001" class="form-control input-taxa" [(ngModel)]="taxaInput" name="taxaInput" required placeholder="5.5000">
+                  </div>
+                  <small class="form-helper">Esta taxa é o padrão para novas dotações de orçamento e lançamentos.</small>
+                </div>
+
+                <div class="cambio-meta">
+                  <span>Última alteração: <strong>{{ config()?.atualizadoEm | date:'dd/MM/yyyy HH:mm' }}</strong></span>
+                  <span>Por: <strong>{{ config()?.atualizadoPor || 'sistema' }}</strong></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-save-cambio" [disabled]="!taxaInput || taxaInput <= 0">
+                  Salvar Taxa Operacional
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
 
         <!-- 2. Cadastro de Eventos -->
@@ -305,17 +397,210 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       align-items: center;
       justify-content: space-between;
       margin-bottom: 1rem;
-      h3 { font-size: 1.1rem; color: var(--color-navy); }
+      h3 { font-size: 1.15rem; color: var(--color-navy); margin: 0; }
     }
     .card-subtitle {
       font-size: 0.8rem;
       color: var(--color-text-secondary);
+      margin-top: 0.2rem;
     }
-    .section-desc {
-      font-size: 0.85rem;
+
+    /* Câmbio Dashboard Grid */
+    .cambio-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+    }
+    .cambio-dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1fr;
+      gap: 1.25rem;
+      margin-top: 0.5rem;
+    }
+    .cambio-box {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: #F8FAFC;
+    }
+    .box-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+    .box-tag {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-blue);
+      background: var(--color-blue-subtle);
+      padding: 0.25rem 0.6rem;
+      border-radius: var(--radius-pill);
+      &.tag-purple { color: #6B21A8; background: #F3E8FF; }
+      &.tag-mint { color: #065F46; background: #D1FAE5; }
+    }
+    .btn-refresh {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.6rem;
+    }
+    .market-rate-display {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      margin: 0.5rem 0 1rem 0;
+      flex-wrap: wrap;
+    }
+    .currency-symbol {
+      font-size: 1rem;
+      font-weight: 600;
       color: var(--color-text-secondary);
-      margin-bottom: 1.25rem;
     }
+    .rate-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--color-navy);
+    }
+    .var-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: var(--radius-pill);
+      &.var-pos { background: #DCFCE7; color: #15803D; }
+      &.var-neg { background: #FEE2E2; color: #B91C1C; }
+    }
+    .market-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background: #FFFFFF;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+      margin-bottom: 0.75rem;
+    }
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--color-text-muted);
+    }
+    .stat-val {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--color-navy);
+    }
+    .market-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+    }
+    .btn-copy-rate {
+      background: transparent;
+      border: 1px dashed var(--color-blue);
+      color: var(--color-blue);
+      padding: 0.4rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      &:hover { background: var(--color-blue-subtle); }
+    }
+
+    /* Spread Box */
+    .box-desc {
+      font-size: 0.8rem;
+      color: var(--color-text-secondary);
+      line-height: 1.4;
+      margin-bottom: 0.75rem;
+    }
+    .spread-presets {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+    .preset-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+    .btn-preset {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      padding: 0.25rem 0.55rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-navy);
+      cursor: pointer;
+      &:hover { background: #F1F5F9; }
+      &.active {
+        background: #6B21A8;
+        color: #FFFFFF;
+        border-color: #6B21A8;
+      }
+    }
+    .simulacao-result {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      margin-bottom: 0.75rem;
+    }
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--color-text-secondary);
+    }
+    .result-total {
+      border-top: 1px solid var(--color-border-light);
+      padding-top: 0.4rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .btn-apply-sim {
+      width: 100%;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #6B21A8;
+      border-color: #6B21A8;
+      &:hover { background: #F3E8FF; }
+    }
+
+    /* Active Box */
+    .input-taxa {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--color-navy);
+    }
+    .cambio-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      margin: 0.75rem 0;
+    }
+    .btn-save-cambio {
+      width: 100%;
+    }
+
     .input-prefix-group {
       display: flex;
       align-items: center;
@@ -324,14 +609,6 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
         font-weight: 700;
         color: var(--color-navy);
       }
-    }
-    .cambio-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      font-size: 0.75rem;
-      color: var(--color-text-muted);
-      margin: 1rem 0;
     }
     .color-preview-box {
       display: inline-flex;
@@ -358,6 +635,12 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       gap: 1rem;
     }
     .flex-1 { flex: 1; }
+    .form-helper {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      margin-top: 0.25rem;
+      display: block;
+    }
     .modal-header {
       display: flex;
       align-items: center;
@@ -382,6 +665,12 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       padding-top: 1rem;
       border-top: 1px solid var(--color-border-light);
     }
+
+    @media (max-width: 960px) {
+      .cambio-dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   `]
 })
 export class ConfiguracoesComponent implements OnInit {
@@ -389,7 +678,11 @@ export class ConfiguracoesComponent implements OnInit {
   toast = inject(ToastService);
 
   config = signal<ConfiguracaoGlobal | null>(null);
+  cotacaoMercado = signal<CotacaoDolar | null>(null);
+  isLoadingCotacao = signal(false);
+
   taxaInput: number = 5.50;
+  spreadPercentual: number = 3.0;
 
   eventos = signal<Evento[]>([]);
   categorias = signal<Categoria[]>([]);
@@ -410,6 +703,7 @@ export class ConfiguracoesComponent implements OnInit {
 
   ngOnInit() {
     this.loadAll();
+    this.loadCotacaoMercado();
   }
 
   loadAll() {
@@ -422,11 +716,47 @@ export class ConfiguracoesComponent implements OnInit {
     this.apiService.getStatusFinanceiros().subscribe(res => this.statusList.set(res));
   }
 
+  loadCotacaoMercado() {
+    this.isLoadingCotacao.set(true);
+    this.apiService.getCotacaoDolarAtual().subscribe({
+      next: (cotacao) => {
+        this.cotacaoMercado.set(cotacao);
+        this.isLoadingCotacao.set(false);
+      },
+      error: () => {
+        this.isLoadingCotacao.set(false);
+      }
+    });
+  }
+
+  copiarCotacaoMercado() {
+    const rate = this.cotacaoMercado()?.cotacaoOficial;
+    if (rate) {
+      this.taxaInput = Number(rate.toFixed(4));
+      this.toast.info(`Cotação de mercado R$ ${this.taxaInput} copiada para o campo de taxa.`);
+    }
+  }
+
+  aplicarSpread(spread: number) {
+    this.spreadPercentual = spread;
+  }
+
+  calcularTaxaLiquida(): number {
+    const cotacao = this.cotacaoMercado()?.cotacaoOficial || 5.50;
+    const fator = (100 - this.spreadPercentual) / 100;
+    return Number((cotacao * fator).toFixed(4));
+  }
+
+  aplicarTaxaSimulada() {
+    this.taxaInput = this.calcularTaxaLiquida();
+    this.toast.info(`Taxa líquida estimada de R$ ${this.taxaInput} aplicada ao formulário.`);
+  }
+
   saveTaxaCambio() {
     this.apiService.updateConfiguracao({ taxaCambioUsdBrl: this.taxaInput }).subscribe({
       next: (updated) => {
         this.config.set(updated);
-        this.toast.success('Taxa de câmbio atualizada com sucesso!');
+        this.toast.success('Taxa operacional de câmbio atualizada com sucesso!');
       },
       error: (err) => this.toast.error(err.error?.message || 'Erro ao atualizar taxa de câmbio.')
     });

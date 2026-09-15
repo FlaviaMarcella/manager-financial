@@ -68,9 +68,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
               <th>Evento Vinculado</th>
               <th>Status</th>
               <th>Contato</th>
-              @if (authService.isAdmin()) {
-                <th style="text-align: right;">Ações</th>
-              }
+              <th style="text-align: right;">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -99,18 +97,21 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                   </span>
                 </td>
                 <td><small>{{ p.contato || '—' }}</small></td>
-                @if (authService.isAdmin()) {
-                  <td style="text-align: right;">
-                    <div class="action-buttons">
+                <td style="text-align: right;">
+                  <div class="action-buttons">
+                    <button class="btn btn-sm btn-outline btn-view" (click)="openDetailsModal(p)" title="Visualizar detalhes">
+                      👁️ Detalhes
+                    </button>
+                    @if (authService.isAdmin()) {
                       <button class="btn btn-sm btn-outline" (click)="editParceria(p)" title="Editar">✎</button>
                       <button class="btn btn-sm btn-danger" (click)="deleteParceria(p.id!)" title="Excluir">🗑</button>
-                    </div>
-                  </td>
-                }
+                    }
+                  </div>
+                </td>
               </tr>
             } @empty {
               <tr>
-                <td [attr.colspan]="authService.isAdmin() ? 8 : 7" class="empty-state">
+                <td colspan="8" class="empty-state">
                   Nenhuma parceria encontrada para os filtros selecionados.
                 </td>
               </tr>
@@ -118,6 +119,82 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
           </tbody>
         </table>
       </div>
+
+      <!-- Modal de Detalhes da Parceria (Visualização Completa) -->
+      @if (detailsModalOpen() && selectedParceriaForDetails) {
+        <div class="modal-backdrop" (click)="closeDetailsModal()">
+          <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <div>
+                <h2>👁️ Detalhes da Parceria / Patrocínio</h2>
+                <p class="modal-subtitle">{{ selectedParceriaForDetails.parceiro }}</p>
+              </div>
+              <button class="modal-close" (click)="closeDetailsModal()">×</button>
+            </div>
+
+            <div class="details-container">
+              <div class="details-section">
+                <div class="details-grid">
+                  <div class="detail-item full-row">
+                    <span class="detail-label">Nome da Empresa / Parceiro</span>
+                    <strong class="detail-val-highlight">{{ selectedParceriaForDetails.parceiro }}</strong>
+                  </div>
+
+                  <div class="detail-item">
+                    <span class="detail-label">Tipo de Parceria</span>
+                    <span class="badge" [class.badge-amber]="selectedParceriaForDetails.tipo === 'FINANCEIRA'" [class.badge-purple]="selectedParceriaForDetails.tipo === 'BRINDE'" [class.badge-blue]="selectedParceriaForDetails.tipo === 'PERMUTA'" [class.badge-navy]="selectedParceriaForDetails.tipo === 'APOIO_INSTITUCIONAL'">
+                      {{ selectedParceriaForDetails.tipo }}
+                    </span>
+                  </div>
+
+                  <div class="detail-item">
+                    <span class="detail-label">Status da Negociação</span>
+                    <span class="badge" [class.badge-amber]="selectedParceriaForDetails.status === 'NEGOCIACAO'" [class.badge-mint]="selectedParceriaForDetails.status === 'FECHADO'" [class.badge-blue]="selectedParceriaForDetails.status === 'ENTREGUE'" [class.badge-danger]="selectedParceriaForDetails.status === 'CANCELADO'">
+                      {{ selectedParceriaForDetails.status }}
+                    </span>
+                  </div>
+
+                  <div class="detail-item">
+                    <span class="detail-label">Valor Financeiro Acordado</span>
+                    <strong class="text-mint">{{ (selectedParceriaForDetails.valorContrapartida || 0) | currencyBrl }}</strong>
+                  </div>
+
+                  <div class="detail-item">
+                    <span class="detail-label">Evento Vinculado</span>
+                    <span class="detail-val">{{ selectedParceriaForDetails.eventoNome || 'Geral (Sem evento específico)' }}</span>
+                  </div>
+
+                  <div class="detail-item full-row">
+                    <span class="detail-label">Pessoa de Contato / Canal</span>
+                    <span class="detail-val">{{ selectedParceriaForDetails.contato || 'Não informado' }}</span>
+                  </div>
+
+                  <div class="detail-item full-row">
+                    <span class="detail-label">Itens / Contrapartidas Acordadas</span>
+                    <div class="observacoes-box">{{ selectedParceriaForDetails.itensRecebidos || 'Nenhum item específico registrado' }}</div>
+                  </div>
+
+                  @if (selectedParceriaForDetails.observacoes) {
+                    <div class="detail-item full-row">
+                      <span class="detail-label">Observações & Anotações Internas</span>
+                      <div class="observacoes-box">{{ selectedParceriaForDetails.observacoes }}</div>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline" (click)="closeDetailsModal()">Fechar</button>
+              @if (authService.isAdmin()) {
+                <button type="button" class="btn btn-primary" (click)="editParceria(selectedParceriaForDetails); closeDetailsModal()">
+                  ✎ Editar Parceria
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      }
 
       <!-- Modal de Criação / Edição -->
       @if (modalOpen()) {
@@ -262,6 +339,11 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .text-muted {
       color: var(--color-text-muted);
     }
+    .btn-view {
+      color: var(--color-navy);
+      font-weight: 600;
+      &:hover { background: #F1F5F9; }
+    }
     .action-buttons {
       display: flex;
       justify-content: flex-end;
@@ -301,6 +383,62 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       padding-top: 1rem;
       border-top: 1px solid var(--color-border-light);
     }
+
+    /* Details */
+    .modal-large {
+      max-width: 700px;
+    }
+    .modal-subtitle {
+      font-size: 0.85rem;
+      color: var(--color-text-secondary);
+      margin-top: 0.2rem;
+    }
+    .details-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .details-section {
+      border-bottom: 1px solid var(--color-border-light);
+      padding-bottom: 1rem;
+      &:last-child { border-bottom: none; }
+    }
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      &.full-row { grid-column: 1 / -1; }
+    }
+    .detail-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+    }
+    .detail-val {
+      font-size: 0.9rem;
+      color: var(--color-navy);
+      font-weight: 500;
+    }
+    .detail-val-highlight {
+      font-size: 1.2rem;
+      color: var(--color-navy);
+    }
+    .observacoes-box {
+      background: #F8FAFC;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      font-size: 0.85rem;
+      color: #334155;
+      line-height: 1.5;
+    }
   `]
 })
 export class ParceriasComponent implements OnInit {
@@ -315,6 +453,10 @@ export class ParceriasComponent implements OnInit {
   modalOpen = signal(false);
   isEditing = signal(false);
   editingId: number | null = null;
+
+  // Modal de Detalhes
+  detailsModalOpen = signal(false);
+  selectedParceriaForDetails: Parceria | null = null;
 
   formData: Partial<Parceria> = {
     parceiro: '',
@@ -346,6 +488,16 @@ export class ParceriasComponent implements OnInit {
     return this.parcerias()
       .filter(p => p.status === 'FECHADO' || p.status === 'ENTREGUE')
       .reduce((acc, curr) => acc + (Number(curr.valorContrapartida) || 0), 0);
+  }
+
+  openDetailsModal(p: Parceria) {
+    this.selectedParceriaForDetails = p;
+    this.detailsModalOpen.set(true);
+  }
+
+  closeDetailsModal() {
+    this.detailsModalOpen.set(false);
+    this.selectedParceriaForDetails = null;
   }
 
   openModal() {

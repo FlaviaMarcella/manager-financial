@@ -121,7 +121,10 @@ public class LancamentoService {
                 .flatMap(usuarioRepository::findById)
                 .orElse(null);
 
-        BigDecimal taxaCambio = configService.getTaxaCambioAtual();
+        BigDecimal taxaCambio = (request.getTaxaCambioUsada() != null && request.getTaxaCambioUsada().compareTo(BigDecimal.ZERO) > 0)
+                ? request.getTaxaCambioUsada()
+                : configService.getTaxaCambioAtual();
+
         BigDecimal valorBrl = request.getValorBrl();
         BigDecimal valorUsd = request.getValorUsd();
 
@@ -148,6 +151,7 @@ public class LancamentoService {
                 .categoria(categoria)
                 .valorBrl(valorBrl != null ? valorBrl : BigDecimal.ZERO)
                 .valorUsd(valorUsd != null ? valorUsd : BigDecimal.ZERO)
+                .taxaCambioUsada(taxaCambio)
                 .formaPagamento(request.getFormaPagamento())
                 .status(status)
                 .responsavel(responsavel)
@@ -173,7 +177,10 @@ public class LancamentoService {
             status = statusFinanceiroRepository.findById(request.getStatusId()).orElse(null);
         }
 
-        BigDecimal taxaCambio = configService.getTaxaCambioAtual();
+        BigDecimal taxaCambio = (request.getTaxaCambioUsada() != null && request.getTaxaCambioUsada().compareTo(BigDecimal.ZERO) > 0)
+                ? request.getTaxaCambioUsada()
+                : (lancamento.getTaxaCambioUsada() != null ? lancamento.getTaxaCambioUsada() : configService.getTaxaCambioAtual());
+
         BigDecimal valorBrl = request.getValorBrl();
         BigDecimal valorUsd = request.getValorUsd();
 
@@ -199,6 +206,7 @@ public class LancamentoService {
         lancamento.setCategoria(categoria);
         lancamento.setValorBrl(valorBrl != null ? valorBrl : BigDecimal.ZERO);
         lancamento.setValorUsd(valorUsd != null ? valorUsd : BigDecimal.ZERO);
+        lancamento.setTaxaCambioUsada(taxaCambio);
         lancamento.setFormaPagamento(request.getFormaPagamento());
         lancamento.setStatus(status);
         lancamento.setObservacoes(request.getObservacoes());
@@ -274,6 +282,7 @@ public class LancamentoService {
                 .categoriaNome(l.getCategoria().getNome())
                 .valorUsd(l.getValorUsd())
                 .valorBrl(l.getValorBrl())
+                .taxaCambioUsada(l.getTaxaCambioUsada() != null ? l.getTaxaCambioUsada() : new BigDecimal("5.5000"))
                 .formaPagamento(l.getFormaPagamento())
                 .statusId(l.getStatus() != null ? l.getStatus().getId() : null)
                 .statusNome(l.getStatus() != null ? l.getStatus().getNome() : "Não definido")

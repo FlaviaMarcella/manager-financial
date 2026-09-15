@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
-import { Categoria, CategoriaSaldoDisponivel, Evento, ItemOrcamento, TransferenciaOrcamento } from '../../core/models/models';
+import { Categoria, CategoriaSaldoDisponivel, CotacaoDolar, Evento, ItemOrcamento, TransferenciaOrcamento } from '../../core/models/models';
 import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
 
 @Component({
@@ -83,9 +83,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
               <th>Realizado (BRL)</th>
               <th>Saldo (BRL)</th>
               <th>Status</th>
-              @if (authService.isAdmin()) {
-                <th style="text-align: right;">Ações</th>
-              }
+              <th style="text-align: right;">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -113,22 +111,25 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                     <span class="badge badge-blue">Planejado</span>
                   }
                 </td>
-                @if (authService.isAdmin()) {
-                  <td style="text-align: right;">
-                    <div class="action-buttons">
+                <td style="text-align: right;">
+                  <div class="action-buttons">
+                    <button class="btn btn-sm btn-outline btn-view" (click)="openItemDetailsModal(item)" title="Visualizar detalhes">
+                      👁️ Detalhes
+                    </button>
+                    @if (authService.isAdmin()) {
                       <button class="btn btn-sm btn-outline" (click)="editItem(item)" title="Editar">
                         ✎
                       </button>
                       <button class="btn btn-sm btn-danger" (click)="deleteItem(item.id!)" title="Excluir">
                         🗑
                       </button>
-                    </div>
-                  </td>
-                }
+                    }
+                  </div>
+                </td>
               </tr>
             } @empty {
               <tr>
-                <td [attr.colspan]="authService.isAdmin() ? 9 : 8" class="empty-state">
+                <td colspan="9" class="empty-state">
                   Nenhum item de orçamento encontrado para os filtros selecionados.
                 </td>
               </tr>
@@ -162,6 +163,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                   <th>Taxa Câmbio</th>
                   <th>Justificativa / Motivo</th>
                   <th>Autorizado por</th>
+                  <th style="text-align: right;">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -189,10 +191,15 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                     <td>
                       <span class="user-pill">{{ t.usuarioNome }}</span>
                     </td>
+                    <td style="text-align: right;">
+                      <button class="btn btn-sm btn-outline btn-view" (click)="openTransferDetailsModal(t)" title="Visualizar detalhes da transferência">
+                        👁️ Detalhes
+                      </button>
+                    </td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="7" class="empty-state">
+                    <td colspan="8" class="empty-state">
                       Nenhuma transferência de saldo realizada até o momento.
                     </td>
                   </tr>
@@ -202,6 +209,165 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
           </div>
         }
       </div>
+
+      <!-- Modal de Detalhes do Item de Orçamento -->
+      @if (itemDetailsModalOpen() && selectedItemForDetails) {
+        <div class="modal-backdrop" (click)="closeItemDetailsModal()">
+          <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <div>
+                <h2>👁️ Detalhes da Linha de Orçamento</h2>
+                <p class="modal-subtitle">Dotação orçamentária para {{ selectedItemForDetails.eventoNome }}</p>
+              </div>
+              <button class="modal-close" (click)="closeItemDetailsModal()">×</button>
+            </div>
+
+            <div class="details-container">
+              <div class="details-section">
+                <div class="details-grid">
+                  <div class="detail-item">
+                    <span class="detail-label">Evento Vinculado</span>
+                    <strong class="detail-val-highlight">{{ selectedItemForDetails.eventoNome }}</strong>
+                  </div>
+
+                  <div class="detail-item">
+                    <span class="detail-label">Categoria de Despesa</span>
+                    <span class="badge badge-navy">{{ selectedItemForDetails.categoriaNome }}</span>
+                  </div>
+
+                  <div class="detail-item">
+                    <span class="detail-label">Data de Criação</span>
+                    <span class="detail-val">{{ selectedItemForDetails.criadoEm | date:'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Análise Financeira -->
+              <div class="details-section cambio-details-box">
+                <h4 class="section-title">Valores & Execução Orçamentária</h4>
+                <div class="financial-cards-row">
+                  <div class="fin-card fin-usd">
+                    <span class="fin-label">Valor Orçado em Dólar</span>
+                    <h3 class="fin-value">US$ {{ selectedItemForDetails.valorOrcadoUsd | number:'1.2-2' }}</h3>
+                    <small>Câmbio Usado: R$ {{ selectedItemForDetails.taxaCambioUsada | number:'1.4-4' }}</small>
+                  </div>
+
+                  <div class="fin-card fin-brl">
+                    <span class="fin-label">Valor Orçado em Reais</span>
+                    <h3 class="fin-value">{{ selectedItemForDetails.valorOrcadoBrl | currencyBrl }}</h3>
+                    <small>Teto disponível para gastos</small>
+                  </div>
+                </div>
+
+                <div class="execution-progress-box">
+                  <div class="exec-header">
+                    <span>Gasto Realizado: <strong>{{ selectedItemForDetails.valorRealizadoBrl | currencyBrl }}</strong></span>
+                    <span>Saldo Livre: <strong [class.text-danger]="(selectedItemForDetails.saldoBrl || 0) < 0" [class.text-mint]="(selectedItemForDetails.saldoBrl || 0) >= 0">{{ selectedItemForDetails.saldoBrl | currencyBrl }}</strong></span>
+                  </div>
+                </div>
+
+                @if (cotacaoMercado()?.cotacaoOficial) {
+                  <div class="market-comparison-bar">
+                    <div class="comparison-header">
+                      <span class="icon">📊</span>
+                      <strong>Referência do Mercado Hoje:</strong>
+                    </div>
+                    <div class="comparison-body">
+                      <span>Valor correspondente na cotação oficial hoje (R$ {{ cotacaoMercado()?.cotacaoOficial | number:'1.4-4' }}): <strong>{{ ((selectedItemForDetails.valorOrcadoUsd || 0) * (cotacaoMercado()?.cotacaoOficial || 1)) | currencyBrl }}</strong></span>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              @if (selectedItemForDetails.observacoes) {
+                <div class="details-section">
+                  <span class="detail-label">Observações & Justificativas</span>
+                  <div class="observacoes-box">{{ selectedItemForDetails.observacoes }}</div>
+                </div>
+              }
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline" (click)="closeItemDetailsModal()">Fechar</button>
+              @if (authService.isAdmin()) {
+                <button type="button" class="btn btn-primary" (click)="editItem(selectedItemForDetails); closeItemDetailsModal()">
+                  ✎ Editar Orçamento
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Modal de Detalhes da Transferência / Rollover -->
+      @if (transferDetailsModalOpen() && selectedTransferForDetails) {
+        <div class="modal-backdrop" (click)="closeTransferDetailsModal()">
+          <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <div>
+                <h2>👁️ Detalhes da Transferência de Orçamento</h2>
+                <p class="modal-subtitle">Trilha de auditoria e remanejamento entre eventos</p>
+              </div>
+              <button class="modal-close" (click)="closeTransferDetailsModal()">×</button>
+            </div>
+
+            <div class="details-container">
+              <div class="details-section">
+                <div class="transfer-summary-box">
+                  <div class="trans-flow-col">
+                    <span class="detail-label">Origem (De)</span>
+                    <strong class="flow-event">{{ selectedTransferForDetails.eventoOrigemNome }}</strong>
+                    <span class="cat-tag">{{ selectedTransferForDetails.categoriaOrigemNome }}</span>
+                  </div>
+                  <div class="trans-flow-arrow">➔</div>
+                  <div class="trans-flow-col text-mint">
+                    <span class="detail-label">Destino (Para)</span>
+                    <strong class="flow-event">{{ selectedTransferForDetails.eventoDestinoNome }}</strong>
+                    <span class="cat-tag">{{ selectedTransferForDetails.categoriaDestinoNome }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="details-section cambio-details-box">
+                <h4 class="section-title">Valores Transferidos & Câmbio</h4>
+                <div class="financial-cards-row">
+                  <div class="fin-card fin-usd">
+                    <span class="fin-label">Valor Remanejado (USD)</span>
+                    <h3 class="fin-value">US$ {{ selectedTransferForDetails.valorUsd | number:'1.2-2' }}</h3>
+                    <small>Câmbio: R$ {{ selectedTransferForDetails.taxaCambio | number:'1.4-4' }}</small>
+                  </div>
+                  <div class="fin-card fin-brl">
+                    <span class="fin-label">Equivalente em Reais (BRL)</span>
+                    <h3 class="fin-value">{{ selectedTransferForDetails.valorBrl | currencyBrl }}</h3>
+                    <small>Aporte no evento receptor</small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="details-section">
+                <div class="details-grid">
+                  <div class="detail-item">
+                    <span class="detail-label">Autorizado Por</span>
+                    <span class="user-pill">{{ selectedTransferForDetails.usuarioNome }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Data e Hora da Operação</span>
+                    <span class="detail-val">{{ selectedTransferForDetails.criadoEm | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+                  </div>
+                  <div class="detail-item full-row">
+                    <span class="detail-label">Justificativa / Motivo</span>
+                    <div class="observacoes-box">{{ selectedTransferForDetails.motivo || 'Remanejamento de saldo' }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline" (click)="closeTransferDetailsModal()">Fechar Detalhes</button>
+            </div>
+          </div>
+        </div>
+      }
 
       <!-- Modal de Criação / Edição de Orçamento -->
       @if (modalOpen()) {
@@ -233,11 +399,24 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                 </select>
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Valor Orçado em USD (US$) *</label>
-                <input type="number" step="0.01" min="0" class="form-control" [(ngModel)]="formData.valorOrcadoUsd" name="valorOrcadoUsd" required placeholder="0.00">
-                <small class="form-helper">
-                  Valor estimado em BRL: <strong>{{ ((formData.valorOrcadoUsd || 0) * (taxaAtual())) | currencyBrl }}</strong> (Taxa: {{ taxaAtual() | number:'1.4-4' }})
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label class="form-label">Valor Orçado em USD (US$) *</label>
+                  <input type="number" step="0.01" min="0" class="form-control" [(ngModel)]="formData.valorOrcadoUsd" name="valorOrcadoUsd" required placeholder="0.00">
+                </div>
+
+                <div class="form-group flex-1">
+                  <label class="form-label">Taxa de Câmbio (R$)</label>
+                  <input type="number" step="0.0001" min="0.0001" class="form-control" [(ngModel)]="formData.taxaCambioUsada" name="taxaCambioUsada" placeholder="5.5000">
+                </div>
+              </div>
+
+              <div class="conversion-hint" *ngIf="formData.valorOrcadoUsd">
+                <small>
+                  Equivalente em BRL: <strong>{{ ((formData.valorOrcadoUsd || 0) * (formData.taxaCambioUsada || taxaAtual())) | currencyBrl }}</strong>
+                  @if (cotacaoMercado()?.cotacaoOficial) {
+                    <span> • Mercado Hoje: <strong>1 USD = R$ {{ cotacaoMercado()?.cotacaoOficial | number:'1.4-4' }}</strong></span>
+                  }
                 </small>
               </div>
 
@@ -264,7 +443,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
             <div class="modal-header">
               <div>
                 <h2>🔄 Transferir Saldo Remanescente entre Eventos</h2>
-                <p class="modal-subtitle">Remaneje sobras de eventos concluídos ou em andamento para próximos eventos</p>
+                <p class="modal-subtitle">Remaneje sobras de eventos concluídos ou em andamento para novos eventos</p>
               </div>
               <button class="modal-close" (click)="closeTransferModal()">×</button>
             </div>
@@ -340,19 +519,28 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
 
               <!-- Detalhes do Valor e Justificativa -->
               <div class="transfer-details">
-                <div class="form-group">
-                  <div class="label-with-action">
-                    <label class="form-label">Valor a Transferir em USD (US$) *</label>
-                    @if (selectedSaldoDisponivel() && (selectedSaldoDisponivel()?.saldoDisponivelUsd || 0) > 0) {
-                      <button type="button" class="btn-link" (click)="usarSaldoTotal()">
-                        Usar Saldo Total (US$ {{ selectedSaldoDisponivel()?.saldoDisponivelUsd | number:'1.2-2' }})
-                      </button>
-                    }
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <div class="label-with-action">
+                      <label class="form-label">Valor a Transferir em USD (US$) *</label>
+                      @if (selectedSaldoDisponivel() && (selectedSaldoDisponivel()?.saldoDisponivelUsd || 0) > 0) {
+                        <button type="button" class="btn-link" (click)="usarSaldoTotal()">
+                          Usar Saldo Total (US$ {{ selectedSaldoDisponivel()?.saldoDisponivelUsd | number:'1.2-2' }})
+                        </button>
+                      }
+                    </div>
+                    <input type="number" step="0.01" min="0.01" [max]="selectedSaldoDisponivel()?.saldoDisponivelUsd || 99999" class="form-control" [(ngModel)]="transferData.valorUsd" name="valorUsd" required placeholder="0.00">
                   </div>
-                  <input type="number" step="0.01" min="0.01" [max]="selectedSaldoDisponivel()?.saldoDisponivelUsd || 99999" class="form-control" [(ngModel)]="transferData.valorUsd" name="valorUsd" required placeholder="0.00">
-                  
-                  <small class="form-helper">
-                    Equivalente em BRL: <strong>{{ ((transferData.valorUsd || 0) * taxaAtual()) | currencyBrl }}</strong> (Câmbio: R$ {{ taxaAtual() | number:'1.4-4' }})
+
+                  <div class="form-group flex-1">
+                    <label class="form-label">Taxa de Câmbio Efetiva (R$)</label>
+                    <input type="number" step="0.0001" min="0.0001" class="form-control" [(ngModel)]="transferData.taxaCambio" name="taxaCambio" placeholder="5.5000">
+                  </div>
+                </div>
+                
+                <div class="conversion-hint" *ngIf="transferData.valorUsd">
+                  <small>
+                    Equivalente em BRL: <strong>{{ ((transferData.valorUsd || 0) * (transferData.taxaCambio || taxaAtual())) | currencyBrl }}</strong> (Taxa: R$ {{ (transferData.taxaCambio || taxaAtual()) | number:'1.4-4' }})
                   </small>
                 </div>
 
@@ -451,16 +639,27 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       &.saldo-positivo { background: var(--color-mint-subtle); color: #00874C; }
       &.saldo-negativo { background: var(--color-danger-subtle); color: var(--color-danger); }
     }
+    .btn-view {
+      color: var(--color-navy);
+      font-weight: 600;
+      &:hover { background: #F1F5F9; }
+    }
     .action-buttons {
       display: flex;
       justify-content: flex-end;
       gap: 0.5rem;
+      flex-wrap: wrap;
     }
     .empty-state {
       text-align: center;
       padding: 3rem 1rem;
       color: var(--color-text-muted);
     }
+    .form-row {
+      display: flex;
+      gap: 1rem;
+    }
+    .flex-1 { flex: 1; }
 
     /* History Card */
     .history-card {
@@ -530,9 +729,9 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       color: #334155;
     }
 
-    /* Modals */
+    /* Modais */
     .modal-large {
-      max-width: 720px;
+      max-width: 760px;
     }
     .modal-header {
       display: flex;
@@ -582,6 +781,148 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       margin-top: 1.75rem;
       padding-top: 1rem;
       border-top: 1px solid var(--color-border-light);
+    }
+
+    /* Details View Styling */
+    .details-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .details-section {
+      border-bottom: 1px solid var(--color-border-light);
+      padding-bottom: 1.25rem;
+      &:last-child { border-bottom: none; }
+    }
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--color-navy);
+      margin-bottom: 0.75rem;
+    }
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      &.full-row { grid-column: 1 / -1; }
+    }
+    .detail-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+    }
+    .detail-val {
+      font-size: 0.9rem;
+      color: var(--color-navy);
+      font-weight: 500;
+    }
+    .detail-val-highlight {
+      font-size: 1.2rem;
+      color: var(--color-navy);
+    }
+    .cambio-details-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+    }
+    .financial-cards-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .fin-card {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      &.fin-brl { border-left: 4px solid var(--color-amber); }
+      &.fin-usd { border-left: 4px solid var(--color-blue); }
+    }
+    .fin-label {
+      font-size: 0.75rem;
+      color: var(--color-text-secondary);
+      font-weight: 600;
+    }
+    .fin-value {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--color-navy);
+      margin: 0.1rem 0;
+    }
+    .execution-progress-box {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .exec-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--color-text-secondary);
+    }
+    .market-comparison-bar {
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+    }
+    .comparison-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      color: #92400E;
+    }
+    .observacoes-box {
+      background: #F8FAFC;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem;
+      font-size: 0.85rem;
+      color: #334155;
+      line-height: 1.5;
+      margin-top: 0.35rem;
+    }
+    .transfer-summary-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+    }
+    .trans-flow-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .flow-event {
+      font-size: 1.1rem;
+      color: var(--color-navy);
+    }
+    .trans-flow-arrow {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--color-navy);
     }
 
     /* Transfer Form Grid */
@@ -647,7 +988,15 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .transfer-details {
       display: flex;
       flex-direction: column;
-      gap: 1.25rem;
+      gap: 1rem;
+    }
+    .conversion-hint {
+      font-size: 0.8rem;
+      color: #B45309;
+      background: #FFFBEB;
+      border: 1px solid #FEF3C7;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-sm);
     }
 
     @media (max-width: 768px) {
@@ -671,11 +1020,19 @@ export class OrcamentoComponent implements OnInit {
   transferencias = signal<TransferenciaOrcamento[]>([]);
   saldosOrigem = signal<CategoriaSaldoDisponivel[]>([]);
   taxaAtual = signal<number>(5.50);
+  cotacaoMercado = signal<CotacaoDolar | null>(null);
 
   selectedEventoId: number | null = null;
   modalOpen = signal(false);
   isEditing = signal(false);
   editingId: number | null = null;
+
+  // Modais de Detalhes
+  itemDetailsModalOpen = signal(false);
+  selectedItemForDetails: ItemOrcamento | null = null;
+
+  transferDetailsModalOpen = signal(false);
+  selectedTransferForDetails: TransferenciaOrcamento | null = null;
 
   transferModalOpen = signal(false);
   isSubmittingTransfer = signal(false);
@@ -685,6 +1042,7 @@ export class OrcamentoComponent implements OnInit {
     eventoId: undefined,
     categoriaId: undefined,
     valorOrcadoUsd: 0,
+    taxaCambioUsada: 5.50,
     observacoes: ''
   };
 
@@ -694,6 +1052,7 @@ export class OrcamentoComponent implements OnInit {
     eventoDestinoId: undefined,
     categoriaDestinoId: undefined,
     valorUsd: 0,
+    taxaCambio: 5.50,
     motivo: ''
   };
 
@@ -701,6 +1060,7 @@ export class OrcamentoComponent implements OnInit {
     this.loadEventos();
     this.loadCategorias();
     this.loadConfig();
+    this.loadCotacaoMercado();
     this.loadItens();
     this.loadTransferencias();
   }
@@ -714,7 +1074,22 @@ export class OrcamentoComponent implements OnInit {
   }
 
   loadConfig() {
-    this.apiService.getConfiguracao().subscribe(cfg => this.taxaAtual.set(cfg.taxaCambioUsdBrl));
+    this.apiService.getConfiguracao().subscribe(cfg => {
+      this.taxaAtual.set(cfg.taxaCambioUsdBrl);
+      if (!this.formData.taxaCambioUsada) {
+        this.formData.taxaCambioUsada = cfg.taxaCambioUsdBrl;
+      }
+      if (!this.transferData.taxaCambio) {
+        this.transferData.taxaCambio = cfg.taxaCambioUsdBrl;
+      }
+    });
+  }
+
+  loadCotacaoMercado() {
+    this.apiService.getCotacaoDolarAtual().subscribe({
+      next: (c) => this.cotacaoMercado.set(c),
+      error: () => {}
+    });
   }
 
   loadItens() {
@@ -750,6 +1125,27 @@ export class OrcamentoComponent implements OnInit {
     return this.totalBrl() - this.totalRealizado();
   }
 
+  // Modais de Detalhes
+  openItemDetailsModal(item: ItemOrcamento) {
+    this.selectedItemForDetails = item;
+    this.itemDetailsModalOpen.set(true);
+  }
+
+  closeItemDetailsModal() {
+    this.itemDetailsModalOpen.set(false);
+    this.selectedItemForDetails = null;
+  }
+
+  openTransferDetailsModal(transfer: TransferenciaOrcamento) {
+    this.selectedTransferForDetails = transfer;
+    this.transferDetailsModalOpen.set(true);
+  }
+
+  closeTransferDetailsModal() {
+    this.transferDetailsModalOpen.set(false);
+    this.selectedTransferForDetails = null;
+  }
+
   openModal() {
     this.isEditing.set(false);
     this.editingId = null;
@@ -757,6 +1153,7 @@ export class OrcamentoComponent implements OnInit {
       eventoId: this.selectedEventoId || (this.eventos()[0]?.id ?? undefined),
       categoriaId: this.categorias()[0]?.id ?? undefined,
       valorOrcadoUsd: 0,
+      taxaCambioUsada: this.taxaAtual(),
       observacoes: ''
     };
     this.modalOpen.set(true);
@@ -769,6 +1166,7 @@ export class OrcamentoComponent implements OnInit {
       eventoId: item.eventoId,
       categoriaId: item.categoriaId,
       valorOrcadoUsd: item.valorOrcadoUsd,
+      taxaCambioUsada: item.taxaCambioUsada || this.taxaAtual(),
       observacoes: item.observacoes
     };
     this.modalOpen.set(true);
@@ -820,6 +1218,7 @@ export class OrcamentoComponent implements OnInit {
       eventoDestinoId: undefined,
       categoriaDestinoId: undefined,
       valorUsd: 0,
+      taxaCambio: this.taxaAtual(),
       motivo: ''
     };
     this.saldosOrigem.set([]);

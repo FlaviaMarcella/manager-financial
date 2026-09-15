@@ -16,6 +16,7 @@ public class LancamentoDTO {
     private String categoriaNome;
     private BigDecimal valorUsd;
     private BigDecimal valorBrl;
+    private BigDecimal taxaCambioUsada;
     private String formaPagamento;
     private Long statusId;
     private String statusNome;
@@ -31,8 +32,8 @@ public class LancamentoDTO {
 
     public LancamentoDTO(Long id, LocalDate data, String descricao, String fornecedor, String numeroNotaFiscal,
                          Long eventoId, String eventoNome, Long categoriaId, String categoriaNome,
-                         BigDecimal valorUsd, BigDecimal valorBrl, String formaPagamento,
-                         Long statusId, String statusNome, String statusCorBadge,
+                         BigDecimal valorUsd, BigDecimal valorBrl, BigDecimal taxaCambioUsada,
+                         String formaPagamento, Long statusId, String statusNome, String statusCorBadge,
                          Long responsavelId, String responsavelNome, String anexoUrl,
                          String anexoNomeOriginal, String observacoes, OffsetDateTime criadoEm) {
         this.id = id;
@@ -46,6 +47,7 @@ public class LancamentoDTO {
         this.categoriaNome = categoriaNome;
         this.valorUsd = valorUsd;
         this.valorBrl = valorBrl;
+        this.taxaCambioUsada = taxaCambioUsada;
         this.formaPagamento = formaPagamento;
         this.statusId = statusId;
         this.statusNome = statusNome;
@@ -72,6 +74,7 @@ public class LancamentoDTO {
         private String categoriaNome;
         private BigDecimal valorUsd;
         private BigDecimal valorBrl;
+        private BigDecimal taxaCambioUsada;
         private String formaPagamento;
         private Long statusId;
         private String statusNome;
@@ -94,6 +97,7 @@ public class LancamentoDTO {
         public Builder categoriaNome(String categoriaNome) { this.categoriaNome = categoriaNome; return this; }
         public Builder valorUsd(BigDecimal valorUsd) { this.valorUsd = valorUsd; return this; }
         public Builder valorBrl(BigDecimal valorBrl) { this.valorBrl = valorBrl; return this; }
+        public Builder taxaCambioUsada(BigDecimal taxaCambioUsada) { this.taxaCambioUsada = taxaCambioUsada; return this; }
         public Builder formaPagamento(String formaPagamento) { this.formaPagamento = formaPagamento; return this; }
         public Builder statusId(Long statusId) { this.statusId = statusId; return this; }
         public Builder statusNome(String statusNome) { this.statusNome = statusNome; return this; }
@@ -105,7 +109,7 @@ public class LancamentoDTO {
         public Builder observacoes(String observacoes) { this.observacoes = observacoes; return this; }
         public Builder criadoEm(OffsetDateTime criadoEm) { this.criadoEm = criadoEm; return this; }
         public LancamentoDTO build() {
-            return new LancamentoDTO(id, data, descricao, fornecedor, numeroNotaFiscal, eventoId, eventoNome, categoriaId, categoriaNome, valorUsd, valorBrl, formaPagamento, statusId, statusNome, statusCorBadge, responsavelId, responsavelNome, anexoUrl, anexoNomeOriginal, observacoes, criadoEm);
+            return new LancamentoDTO(id, data, descricao, fornecedor, numeroNotaFiscal, eventoId, eventoNome, categoriaId, categoriaNome, valorUsd, valorBrl, taxaCambioUsada, formaPagamento, statusId, statusNome, statusCorBadge, responsavelId, responsavelNome, anexoUrl, anexoNomeOriginal, observacoes, criadoEm);
         }
     }
 
@@ -131,6 +135,8 @@ public class LancamentoDTO {
     public void setValorUsd(BigDecimal valorUsd) { this.valorUsd = valorUsd; }
     public BigDecimal getValorBrl() { return valorBrl; }
     public void setValorBrl(BigDecimal valorBrl) { this.valorBrl = valorBrl; }
+    public BigDecimal getTaxaCambioUsada() { return taxaCambioUsada; }
+    public void setTaxaCambioUsada(BigDecimal taxaCambioUsada) { this.taxaCambioUsada = taxaCambioUsada; }
     public String getFormaPagamento() { return formaPagamento; }
     public void setFormaPagamento(String formaPagamento) { this.formaPagamento = formaPagamento; }
     public Long getStatusId() { return statusId; }
