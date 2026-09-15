@@ -14,15 +14,16 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Criar usuario sem privilegios para seguranca
-RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
-
-# Criar diretorio de uploads local
-VOLUME /app/uploads
+# Criar usuario sem privilegios para seguranca e preparar diretorios
+RUN addgroup -S spring && adduser -S spring -G spring \
+    && mkdir -p /app/uploads \
+    && chown -R spring:spring /app
 
 # Copiar artifact gerado
 COPY --from=builder /app/target/*.jar app.jar
+RUN chown -R spring:spring /app
+
+USER spring:spring
 
 # Configuracao de JVM restrita a 384MB de Heap para caber com folga em instancias de 1GB RAM
 ENV JAVA_OPTS="-Xms128m -Xmx384m -XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=100 -Djava.security.egd=file:/dev/./urandom"

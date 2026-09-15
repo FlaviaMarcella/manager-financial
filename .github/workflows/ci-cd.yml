@@ -109,11 +109,8 @@ jobs:
             git fetch --all
             git reset --hard origin/main
             
-            # Ensure .env is present with valid credentials
-            if [ ! -f .env ] || grep -q "your_secure_postgres_password_here" .env; then
-              echo "Creating/updating .env from example..."
-              cp .env.example .env
-            fi
+            # Ensure .env is synced with latest configuration
+            cp .env.example .env
             
             # Build first while current version runs, then seamlessly swap containers
             docker compose -f docker-compose.prod.yml build
