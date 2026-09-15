@@ -109,9 +109,9 @@ jobs:
             git fetch --all
             git reset --hard origin/main
             
-            # Ensure .env is present
-            if [ ! -f .env ]; then
-              echo "Creating .env from example..."
+            # Ensure .env is present with valid credentials
+            if [ ! -f .env ] || grep -q "your_secure_postgres_password_here" .env; then
+              echo "Creating/updating .env from example..."
               cp .env.example .env
             fi
             
