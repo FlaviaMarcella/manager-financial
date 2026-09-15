@@ -17,7 +17,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       <div class="page-header">
         <div>
           <h1 class="page-title">Lançamentos & Notas Fiscais</h1>
-          <p class="page-subtitle">Registro de despesas pagas, notas fiscais, comprovantes e controle cambial</p>
+          <p class="page-subtitle">Registro de despesas pagas, notas fiscais, comprovantes e controle de taxas cambiais</p>
         </div>
         @if (authService.isAdmin()) {
           <button class="btn btn-primary" (click)="openModal()">
@@ -30,12 +30,12 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
         }
       </div>
 
-      <!-- Filtros Avançados -->
+      <!-- Filtros Avançados Alinhados -->
       <div class="card filter-card">
         <div class="filters-grid">
           <div class="form-group">
-            <label class="form-label">Buscar (Descrição, Fornecedor ou NF):</label>
-            <input type="text" class="form-control" [(ngModel)]="filters.busca" (input)="applyFilters()" placeholder="Digite para filtrar...">
+            <label class="form-label">Buscar:</label>
+            <input type="text" class="form-control" [(ngModel)]="filters.busca" (input)="applyFilters()" placeholder="Descrição, fornecedor, NF...">
           </div>
 
           <div class="form-group">
@@ -79,97 +79,102 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
           </div>
         </div>
 
-        <div class="filter-actions">
+        <div class="filter-footer">
           <button class="btn btn-sm btn-outline" (click)="clearFilters()">Limpar Filtros</button>
-          <div class="filter-total">
-            <span>Total Filtrado:</span>
-            <strong>{{ totalFiltradoBrl() | currencyBrl }}</strong>
+          <div class="filter-stats">
+            <span class="stat-count">{{ lancamentos().length }} itens encontrados</span>
+            <div class="filter-total">
+              <span class="total-label">Total Filtrado:</span>
+              <strong class="total-val">{{ totalFiltradoBrl() | currencyBrl }}</strong>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Tabela de Lançamentos -->
-      <div class="table-container">
-        <table class="custom-table">
+      <!-- Tabela de Lançamentos Fluida e Sem Scroll Horizontal -->
+      <div class="table-card">
+        <table class="responsive-table">
           <thead>
             <tr>
-              <th>Data</th>
-              <th>Descrição & Fornecedor</th>
-              <th>Nº NF</th>
-              <th>Evento</th>
-              <th>Categoria</th>
-              <th>Valor (BRL)</th>
-              <th>Câmbio</th>
-              <th>Forma Pgto</th>
-              <th>Status</th>
-              <th>Anexo</th>
-              <th style="text-align: right;">Ações</th>
+              <th style="width: 100px;">Data</th>
+              <th style="min-width: 180px;">Descrição & Fornecedor</th>
+              <th style="min-width: 140px;">Evento & Categoria</th>
+              <th style="width: 110px;">Nº NF</th>
+              <th style="min-width: 170px;">Valor & Câmbio</th>
+              <th style="width: 120px;">Status / Anexo</th>
+              <th style="width: 170px; text-align: right;">Ações</th>
             </tr>
           </thead>
           <tbody>
             @for (item of lancamentos(); track item.id) {
               <tr>
-                <td>{{ item.data | date:'dd/MM/yyyy' }}</td>
-                <td>
-                  <strong>{{ item.descricao }}</strong>
-                  <div class="supplier-text">Fornecedor: {{ item.fornecedor }}</div>
+                <td class="col-date">
+                  <span class="date-badge">{{ item.data | date:'dd/MM/yyyy' }}</span>
                 </td>
-                <td>
+                <td class="col-desc">
+                  <strong class="item-title">{{ item.descricao }}</strong>
+                  <div class="supplier-text">Fornecedor: <span>{{ item.fornecedor }}</span></div>
+                </td>
+                <td class="col-event-cat">
+                  <div class="event-name">{{ item.eventoNome }}</div>
+                  <span class="category-pill">{{ item.categoriaNome }}</span>
+                </td>
+                <td class="col-nf">
                   @if (item.numeroNotaFiscal) {
-                    <code>{{ item.numeroNotaFiscal }}</code>
+                    <code class="nf-code">{{ item.numeroNotaFiscal }}</code>
                   } @else {
                     <span class="text-muted">—</span>
                   }
                 </td>
-                <td><small>{{ item.eventoNome }}</small></td>
-                <td><span class="badge badge-navy">{{ item.categoriaNome }}</span></td>
-                <td>
-                  <strong>{{ item.valorBrl | currencyBrl }}</strong>
+                <td class="col-values">
+                  <div class="val-brl">{{ item.valorBrl | currencyBrl }}</div>
                   @if (item.valorUsd && item.valorUsd > 0) {
-                    <small class="text-muted d-block">(US$ {{ item.valorUsd | number:'1.2-2' }})</small>
+                    <div class="val-usd-meta">
+                      <span class="val-usd">US$ {{ item.valorUsd | number:'1.2-2' }}</span>
+                      <span class="cambio-rate">Tx: R$ {{ item.taxaCambioUsada | number:'1.4-4' }}</span>
+                    </div>
+                    @if (calcularTaxaRetida(item) > 0.05) {
+                      <div class="fee-loss-tag" title="Valor retido em spread/taxas bancárias de conversão">
+                        Taxa: R$ {{ calcularTaxaRetida(item) | number:'1.2-2' }}
+                      </div>
+                    }
                   }
                 </td>
-                <td>
-                  <span class="cambio-tag" title="Taxa de conversão usada">
-                    R$ {{ (item.taxaCambioUsada || taxaCambio()) | number:'1.2-4' }}
-                  </span>
+                <td class="col-status-anexo">
+                  <div class="status-stack">
+                    <span class="status-pill" [style.background-color]="item.statusCorBadge + '22'" [style.color]="item.statusCorBadge" [style.border-color]="item.statusCorBadge + '55'">
+                      {{ item.statusNome }}
+                    </span>
+                    @if (item.anexoUrl) {
+                      <button class="btn-anexo" (click)="downloadAnexo(item)" title="Ver Anexo / NF">
+                        📎 Ver NF
+                      </button>
+                    }
+                  </div>
                 </td>
-                <td><small>{{ item.formaPagamento }}</small></td>
-                <td>
-                  <span class="badge" [style.background-color]="item.statusCorBadge + '22'" [style.color]="item.statusCorBadge">
-                    {{ item.statusNome }}
-                  </span>
-                </td>
-                <td>
-                  @if (item.anexoUrl) {
-                    <a [href]="'/api/lancamentos/' + item.id + '/anexo'" target="_blank" class="btn btn-sm btn-outline btn-anexo" title="Ver comprovante">
-                      📎 Ver NF
-                    </a>
-                  } @else if (authService.isAdmin()) {
-                    <button class="btn btn-sm btn-outline btn-upload" (click)="openUploadModal(item)" title="Fazer upload de comprovante">
-                      + Anexar
-                    </button>
-                  } @else {
-                    <span class="text-muted">Sem anexo</span>
-                  }
-                </td>
-                <td style="text-align: right;">
-                  <div class="action-buttons">
-                    <button class="btn btn-sm btn-outline btn-view" (click)="openDetailsModal(item)" title="Visualizar todos os detalhes">
+                <td class="col-actions">
+                  <div class="actions-group">
+                    <button class="btn btn-sm btn-outline btn-details" (click)="openDetailsModal(item)" title="Visualizar todos os detalhes">
                       👁️ Detalhes
                     </button>
                     @if (authService.isAdmin()) {
-                      <button class="btn btn-sm btn-outline" (click)="openUploadModal(item)" title="Gerenciar anexo">📎</button>
-                      <button class="btn btn-sm btn-outline" (click)="editLancamento(item)" title="Editar">✎</button>
-                      <button class="btn btn-sm btn-danger" (click)="deleteLancamento(item.id!)" title="Excluir">🗑</button>
+                      <button class="btn btn-sm btn-outline btn-icon" (click)="openModal(item)" title="Editar">
+                        ✏️
+                      </button>
+                      <button class="btn btn-sm btn-danger-outline btn-icon" (click)="excluir(item.id!)" title="Excluir">
+                        🗑️
+                      </button>
                     }
                   </div>
                 </td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="11" class="empty-state">
-                  Nenhum lançamento financeiro encontrado para os filtros selecionados.
+                <td colspan="7" class="empty-state">
+                  <div class="empty-content">
+                    <span class="empty-icon">📂</span>
+                    <p>Nenhum lançamento encontrado para os filtros selecionados.</p>
+                  </div>
                 </td>
               </tr>
             }
@@ -177,306 +182,170 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
         </table>
       </div>
 
-      <!-- Modal de Detalhes Completos (Visualização dos Dados) -->
-      @if (detailsModalOpen() && selectedLancamentoForDetails) {
-        <div class="modal-backdrop" (click)="closeDetailsModal()">
-          <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+      <!-- Modal de Criação / Edição com Cálculo Inteligente de Taxas -->
+      @if (showModal()) {
+        <div class="modal-backdrop" (click)="closeModal()">
+          <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
             <div class="modal-header">
-              <div>
-                <h2>👁️ Detalhes Completos do Lançamento</h2>
-                <p class="modal-subtitle">ID #{{ selectedLancamentoForDetails.id }} • Registrado em {{ selectedLancamentoForDetails.criadoEm | date:'dd/MM/yyyy HH:mm' }}</p>
-              </div>
-              <button class="modal-close" (click)="closeDetailsModal()">×</button>
+              <h2 class="modal-title">{{ editingId() ? 'Editar Lançamento' : 'Novo Lançamento / Despesa' }}</h2>
+              <button class="btn-close" (click)="closeModal()">✕</button>
             </div>
 
-            <div class="details-container">
-              <!-- Bloco 1: Identificação Principal -->
-              <div class="details-section">
-                <div class="details-grid">
-                  <div class="detail-item full-row">
-                    <span class="detail-label">Descrição da Despesa</span>
-                    <strong class="detail-val-highlight">{{ selectedLancamentoForDetails.descricao }}</strong>
+            <form (ngSubmit)="salvar()">
+              <div class="modal-body">
+                <div class="form-row">
+                  <div class="form-group col-4">
+                    <label class="form-label required">Data:</label>
+                    <input type="date" class="form-control" [(ngModel)]="formData.data" name="data" required>
                   </div>
-
-                  <div class="detail-item">
-                    <span class="detail-label">Fornecedor / Beneficiário</span>
-                    <span class="detail-val">{{ selectedLancamentoForDetails.fornecedor }}</span>
+                  <div class="form-group col-8">
+                    <label class="form-label required">Descrição:</label>
+                    <input type="text" class="form-control" [(ngModel)]="formData.descricao" name="descricao" placeholder="Ex: Coffee break do DemoDay" required>
                   </div>
+                </div>
 
-                  <div class="detail-item">
-                    <span class="detail-label">Número da Nota Fiscal / Recibo</span>
-                    <span class="detail-val"><code>{{ selectedLancamentoForDetails.numeroNotaFiscal || 'Não informado' }}</code></span>
+                <div class="form-row">
+                  <div class="form-group col-6">
+                    <label class="form-label required">Fornecedor / Prestador:</label>
+                    <input type="text" class="form-control" [(ngModel)]="formData.fornecedor" name="fornecedor" placeholder="Ex: Salgados Flor" required>
                   </div>
-
-                  <div class="detail-item">
-                    <span class="detail-label">Data do Pagamento / Fato Gerador</span>
-                    <span class="detail-val">{{ selectedLancamentoForDetails.data | date:'dd/MM/yyyy' }}</span>
+                  <div class="form-group col-6">
+                    <label class="form-label">Número da Nota Fiscal / Recibo:</label>
+                    <input type="text" class="form-control" [(ngModel)]="formData.numeroNotaFiscal" name="numeroNotaFiscal" placeholder="Ex: NF-000.000.119">
                   </div>
+                </div>
 
-                  <div class="detail-item">
-                    <span class="detail-label">Evento Vinculado</span>
-                    <span class="detail-val">{{ selectedLancamentoForDetails.eventoNome }}</span>
+                <div class="form-row">
+                  <div class="form-group col-6">
+                    <label class="form-label required">Evento:</label>
+                    <select class="form-select" [(ngModel)]="formData.eventoId" name="eventoId" required>
+                      <option [ngValue]="undefined">Selecione o evento</option>
+                      @for (ev of eventos(); track ev.id) {
+                        <option [ngValue]="ev.id">{{ ev.nome }}</option>
+                      }
+                    </select>
                   </div>
-
-                  <div class="detail-item">
-                    <span class="detail-label">Categoria de Despesa</span>
-                    <span class="badge badge-navy">{{ selectedLancamentoForDetails.categoriaNome }}</span>
+                  <div class="form-group col-6">
+                    <label class="form-label required">Categoria:</label>
+                    <select class="form-select" [(ngModel)]="formData.categoriaId" name="categoriaId" required>
+                      <option [ngValue]="undefined">Selecione a categoria</option>
+                      @for (cat of categorias(); track cat.id) {
+                        <option [ngValue]="cat.id">{{ cat.nome }}</option>
+                      }
+                    </select>
                   </div>
+                </div>
 
-                  <div class="detail-item">
-                    <span class="detail-label">Forma de Pagamento</span>
-                    <span class="detail-val">{{ selectedLancamentoForDetails.formaPagamento }}</span>
-                  </div>
-
-                  <div class="detail-item">
-                    <span class="detail-label">Status Financeiro</span>
-                    <span class="badge" [style.background-color]="selectedLancamentoForDetails.statusCorBadge + '22'" [style.color]="selectedLancamentoForDetails.statusCorBadge">
-                      {{ selectedLancamentoForDetails.statusNome }}
+                <!-- Painel de Cálculos Cambiais Inteligentes (BRL vs USD Cobrado vs Taxas) -->
+                <div class="cambio-calc-card">
+                  <div class="calc-header">
+                    <span class="calc-title">💵 Valores e Controle de Câmbio</span>
+                    <span class="calc-badge">
+                      Spot Mercado: R$ {{ (cotacaoMercado()?.cotacaoOficial || 5.07) | number:'1.4-4' }}/USD
                     </span>
                   </div>
 
-                  <div class="detail-item">
-                    <span class="detail-label">Responsável pelo Registro</span>
-                    <span class="detail-val">{{ selectedLancamentoForDetails.responsavelNome || 'Sistema' }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Bloco 2: Valores & Análise Cambial Detalhada -->
-              <div class="details-section cambio-details-box">
-                <h4 class="section-title">Valores & Conversão Cambial</h4>
-                
-                <div class="financial-cards-row">
-                  <div class="fin-card fin-brl">
-                    <span class="fin-label">Valor Efetivo em Reais</span>
-                    <h3 class="fin-value">{{ selectedLancamentoForDetails.valorBrl | currencyBrl }}</h3>
-                    <small>Valor líquido final debitado</small>
-                  </div>
-
-                  <div class="fin-card fin-usd">
-                    <span class="fin-label">Equivalente em Dólares</span>
-                    <h3 class="fin-value">US$ {{ selectedLancamentoForDetails.valorUsd | number:'1.2-2' }}</h3>
-                    <small>Cotação: 1 USD = R$ {{ (selectedLancamentoForDetails.taxaCambioUsada || taxaCambio()) | number:'1.4-4' }}</small>
-                  </div>
-                </div>
-
-                @if (cotacaoOficialMercado()?.cotacaoOficial && selectedLancamentoForDetails.valorUsd) {
-                  <div class="market-comparison-bar">
-                    <div class="comparison-header">
-                      <span class="icon">📊</span>
-                      <strong>Comparativo com a Cotação Oficial de Mercado do Dia:</strong>
-                    </div>
-                    <div class="comparison-body">
-                      <div class="comp-col">
-                        <span>Valor na Cotação Oficial (R$ {{ cotacaoOficialMercado()?.cotacaoOficial | number:'1.4-4' }}):</span>
-                        <strong>{{ (selectedLancamentoForDetails.valorUsd * (cotacaoOficialMercado()?.cotacaoOficial || 1)) | currencyBrl }}</strong>
+                  <div class="form-row">
+                    <div class="form-group col-4">
+                      <label class="form-label required">Valor Pago / NF (BRL):</label>
+                      <div class="input-prefix-group">
+                        <span class="input-prefix">R$</span>
+                        <input type="number" step="0.01" min="0" class="form-control" 
+                               [(ngModel)]="formData.valorBrl" name="valorBrl" 
+                               (input)="onBrlChange()" placeholder="0,00" required>
                       </div>
-                      <div class="comp-col comp-diff">
-                        <span>Desconto de Taxas de Conversão (Spread/IOF):</span>
-                        <strong class="text-danger">
-                          - {{ (((selectedLancamentoForDetails.valorUsd * (cotacaoOficialMercado()?.cotacaoOficial || 1))) - selectedLancamentoForDetails.valorBrl) | currencyBrl }}
-                        </strong>
+                    </div>
+
+                    <div class="form-group col-4">
+                      <label class="form-label">Cobrança Debitada (USD):</label>
+                      <div class="input-prefix-group">
+                        <span class="input-prefix">US$</span>
+                        <input type="number" step="0.01" min="0" class="form-control" 
+                               [(ngModel)]="formData.valorUsd" name="valorUsd" 
+                               (input)="onUsdChange()" placeholder="0,00">
+                      </div>
+                    </div>
+
+                    <div class="form-group col-4">
+                      <label class="form-label">Taxa Efetiva (R$/USD):</label>
+                      <div class="input-prefix-group">
+                        <span class="input-prefix">Tx</span>
+                        <input type="number" step="0.0001" min="0.0001" class="form-control" 
+                               [(ngModel)]="formData.taxaCambioUsada" name="taxaCambioUsada" 
+                               (input)="onTaxaChange()" placeholder="5.5000">
                       </div>
                     </div>
                   </div>
-                }
-              </div>
 
-              <!-- Bloco 3: Observações -->
-              @if (selectedLancamentoForDetails.observacoes) {
-                <div class="details-section">
-                  <span class="detail-label">Observações & Justificativas</span>
-                  <div class="observacoes-box">
-                    {{ selectedLancamentoForDetails.observacoes }}
-                  </div>
-                </div>
-              }
-
-              <!-- Bloco 4: Comprovante Anexo -->
-              <div class="details-section">
-                <span class="detail-label">Comprovante / Nota Fiscal Digitalizada</span>
-                @if (selectedLancamentoForDetails.anexoUrl) {
-                  <div class="attachment-view-box">
-                    <div class="att-info">
-                      <span class="att-icon">📎</span>
-                      <div>
-                        <strong>{{ selectedLancamentoForDetails.anexoNomeOriginal || 'comprovante_fiscal.pdf' }}</strong>
-                        <small class="text-muted d-block">Arquivo armazenado com segurança</small>
+                  <!-- Resumo Visual da Transação -->
+                  @if (formData.valorUsd && formData.valorUsd > 0 && formData.valorBrl && formData.valorBrl > 0) {
+                    <div class="calc-summary-box">
+                      <div class="summary-grid">
+                        <div class="sum-item">
+                          <span class="sum-label">Valor do Fornecedor</span>
+                          <strong class="sum-val text-mint">R$ {{ formData.valorBrl | number:'1.2-2' }}</strong>
+                        </div>
+                        <div class="sum-item">
+                          <span class="sum-label">Total Debitado</span>
+                          <strong class="sum-val text-amber">US$ {{ formData.valorUsd | number:'1.2-2' }}</strong>
+                        </div>
+                        <div class="sum-item">
+                          <span class="sum-label">Taxa Real Praticada</span>
+                          <strong class="sum-val">R$ {{ formData.taxaCambioUsada | number:'1.4-4' }}</strong>
+                        </div>
+                        <div class="sum-item">
+                          <span class="sum-label">Taxas / Spread Retido</span>
+                          <strong class="sum-val text-warning">
+                            R$ {{ modalTaxaRetida() | number:'1.2-2' }} 
+                            <small>({{ modalPctSpread() | number:'1.1-1' }}%)</small>
+                          </strong>
+                        </div>
                       </div>
                     </div>
-                    <a [href]="'/api/lancamentos/' + selectedLancamentoForDetails.id + '/anexo'" target="_blank" class="btn btn-primary btn-sm">
-                      Abrir Comprovante em Nova Guia ↗
-                    </a>
-                  </div>
-                } @else {
-                  <div class="no-attachment-box">
-                    <span>Nenhum comprovante foi anexado a este lançamento.</span>
-                    @if (authService.isAdmin()) {
-                      <button class="btn btn-sm btn-outline" (click)="openUploadModal(selectedLancamentoForDetails); closeDetailsModal()">
-                        + Anexar Comprovante Agora
-                      </button>
-                    }
-                  </div>
-                }
-              </div>
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" class="btn btn-outline" (click)="closeDetailsModal()">Fechar Detalhes</button>
-              @if (authService.isAdmin()) {
-                <button type="button" class="btn btn-primary" (click)="editLancamento(selectedLancamentoForDetails); closeDetailsModal()">
-                  ✎ Editar Lançamento
-                </button>
-              }
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Modal de Criação / Edição -->
-      @if (modalOpen()) {
-        <div class="modal-backdrop" (click)="closeModal()">
-          <div class="modal-content modal-large" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <div>
-                <h2>{{ isEditing() ? 'Editar Lançamento' : 'Novo Lançamento Financeiro' }}</h2>
-                <p class="modal-subtitle">Preencha os dados e confirme a taxa de câmbio e conversão para este pagamento</p>
-              </div>
-              <button class="modal-close" (click)="closeModal()">×</button>
-            </div>
-
-            <form (ngSubmit)="saveLancamento()">
-              <div class="form-row">
-                <div class="form-group flex-1">
-                  <label class="form-label">Data do Pagamento *</label>
-                  <input type="date" class="form-control" [(ngModel)]="formData.data" name="data" required>
-                </div>
-                <div class="form-group flex-1">
-                  <label class="form-label">Nº Nota Fiscal / Recibo</label>
-                  <input type="text" class="form-control" [(ngModel)]="formData.numeroNotaFiscal" name="numeroNotaFiscal" placeholder="Ex: NF-12345">
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Descrição da Despesa *</label>
-                <input type="text" class="form-control" [(ngModel)]="formData.descricao" name="descricao" required placeholder="Ex: Coffee break para 50 participantes">
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Fornecedor / Prestador *</label>
-                <input type="text" class="form-control" [(ngModel)]="formData.fornecedor" name="fornecedor" required placeholder="Ex: Padaria & Buffet Central">
-              </div>
-
-              <div class="form-row">
-                <div class="form-group flex-1">
-                  <label class="form-label">Evento *</label>
-                  <select class="form-select" [(ngModel)]="formData.eventoId" name="eventoId" required>
-                    <option [ngValue]="undefined" disabled>Selecione um evento</option>
-                    @for (ev of eventos(); track ev.id) {
-                      <option [ngValue]="ev.id">{{ ev.nome }}</option>
-                    }
-                  </select>
+                  }
                 </div>
 
-                <div class="form-group flex-1">
-                  <label class="form-label">Categoria *</label>
-                  <select class="form-select" [(ngModel)]="formData.categoriaId" name="categoriaId" required>
-                    <option [ngValue]="undefined" disabled>Selecione uma categoria</option>
-                    @for (cat of categorias(); track cat.id) {
-                      <option [ngValue]="cat.id">{{ cat.nome }}</option>
-                    }
-                  </select>
-                </div>
-              </div>
-
-              <!-- Seção de Câmbio e Conversão do Formulário -->
-              <div class="form-cambio-section">
                 <div class="form-row">
-                  <div class="form-group flex-1">
-                    <label class="form-label">Valor em BRL (R$) *</label>
-                    <div class="input-prefix-group">
-                      <span class="prefix">R$</span>
-                      <input type="number" step="0.01" min="0" class="form-control" [(ngModel)]="formData.valorBrl" (ngModelChange)="onBrlChange()" name="valorBrl" placeholder="0.00">
-                    </div>
+                  <div class="form-group col-6">
+                    <label class="form-label required">Forma de Pagamento:</label>
+                    <select class="form-select" [(ngModel)]="formData.formaPagamento" name="formaPagamento" required>
+                      <option value="Cartão de Crédito">Cartão de Crédito Corporativo</option>
+                      <option value="Cartão de Débito">Cartão de Débito</option>
+                      <option value="PIX">PIX</option>
+                      <option value="Boleto">Boleto Bancário</option>
+                      <option value="Transferência Bancária">Transferência Bancária</option>
+                      <option value="Reembolso">Reembolso</option>
+                    </select>
                   </div>
-
-                  <div class="form-group flex-1">
-                    <label class="form-label">Valor em USD (US$)</label>
-                    <div class="input-prefix-group">
-                      <span class="prefix">US$</span>
-                      <input type="number" step="0.01" min="0" class="form-control" [(ngModel)]="formData.valorUsd" (ngModelChange)="onUsdChange()" name="valorUsd" placeholder="0.00">
-                    </div>
-                  </div>
-
-                  <div class="form-group flex-1">
-                    <div class="label-with-action">
-                      <label class="form-label">Câmbio Efetivo (R$)</label>
-                      @if (cotacaoOficialMercado()?.cotacaoOficial) {
-                        <button type="button" class="btn-link" (click)="usarCotacaoMercadoNoForm()">
-                          Usar Mercado ({{ cotacaoOficialMercado()?.cotacaoOficial | number:'1.2-2' }})
-                        </button>
+                  <div class="form-group col-6">
+                    <label class="form-label">Status Financeiro:</label>
+                    <select class="form-select" [(ngModel)]="formData.statusId" name="statusId">
+                      <option [ngValue]="undefined">Selecione o status</option>
+                      @for (st of statusList(); track st.id) {
+                        <option [ngValue]="st.id">{{ st.nome }}</option>
                       }
-                    </div>
-                    <input type="number" step="0.0001" min="0.0001" class="form-control" [(ngModel)]="formData.taxaCambioUsada" (ngModelChange)="onTaxaChange()" name="taxaCambioUsada" placeholder="5.5000">
+                    </select>
                   </div>
                 </div>
 
-                <!-- Live Dynamic Breakdown -->
-                <div class="conversion-live-breakdown">
-                  <div class="breakdown-item">
-                    <span>💱 Câmbio Aplicado:</span>
-                    <strong>1 USD = R$ {{ (formData.taxaCambioUsada || taxaCambio()) | number:'1.4-4' }}</strong>
-                  </div>
-                  @if (cotacaoOficialMercado()?.cotacaoOficial) {
-                    <div class="breakdown-item">
-                      <span>🌐 Mercado Oficial Hoje:</span>
-                      <strong>1 USD = R$ {{ cotacaoOficialMercado()?.cotacaoOficial | number:'1.4-4' }}</strong>
-                    </div>
-                  }
-                  @if (formData.valorUsd && formData.valorUsd > 0 && cotacaoOficialMercado()?.cotacaoOficial) {
-                    <div class="breakdown-item text-danger">
-                      <span>Desconto de Taxas/Spread:</span>
-                      <strong>
-                        - {{ (((formData.valorUsd || 0) * (cotacaoOficialMercado()?.cotacaoOficial || 1)) - (formData.valorBrl || 0)) | currencyBrl }}
-                      </strong>
-                    </div>
+                <div class="form-group">
+                  <label class="form-label">Anexo (Nota Fiscal / Comprovante PDF ou Imagem):</label>
+                  <input type="file" class="form-control" (change)="onFileSelected($event)" accept=".pdf,.png,.jpg,.jpeg">
+                  @if (selectedFileName) {
+                    <small class="file-hint">Arquivo selecionado: <strong>{{ selectedFileName }}</strong></small>
                   }
                 </div>
-              </div>
 
-              <div class="form-row">
-                <div class="form-group flex-1">
-                  <label class="form-label">Forma de Pagamento *</label>
-                  <select class="form-select" [(ngModel)]="formData.formaPagamento" name="formaPagamento" required>
-                    <option value="PIX">PIX</option>
-                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                    <option value="Boleto">Boleto</option>
-                    <option value="Transferência Bancária">Transferência Bancária</option>
-                    <option value="Dinheiro">Dinheiro</option>
-                    <option value="Reembolso">Reembolso</option>
-                  </select>
+                <div class="form-group">
+                  <label class="form-label">Observações:</label>
+                  <textarea class="form-control" [(ngModel)]="formData.observacoes" name="observacoes" rows="2" placeholder="Informações adicionais sobre o pagamento..."></textarea>
                 </div>
-
-                <div class="form-group flex-1">
-                  <label class="form-label">Status Financeiro</label>
-                  <select class="form-select" [(ngModel)]="formData.statusId" name="statusId">
-                    <option [ngValue]="undefined">Não definido</option>
-                    @for (st of statusList(); track st.id) {
-                      <option [ngValue]="st.id">{{ st.nome }}</option>
-                    }
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Observações & Justificativas</label>
-                <textarea class="form-control" [(ngModel)]="formData.observacoes" name="observacoes" rows="2" placeholder="Detalhes adicionais sobre os itens adquiridos ou contexto do pagamento"></textarea>
               </div>
 
               <div class="modal-footer">
                 <button type="button" class="btn btn-outline" (click)="closeModal()">Cancelar</button>
-                <button type="submit" class="btn btn-primary" [disabled]="!formData.data || !formData.descricao || !formData.fornecedor || !formData.eventoId || !formData.categoriaId || (!formData.valorBrl && !formData.valorUsd)">
-                  {{ isEditing() ? 'Atualizar Lançamento' : 'Salvar Lançamento' }}
+                <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                  {{ saving() ? 'Salvando...' : (editingId() ? 'Atualizar Lançamento' : 'Registrar Lançamento') }}
                 </button>
               </div>
             </form>
@@ -484,45 +353,122 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
         </div>
       }
 
-      <!-- Modal de Upload de Anexo -->
-      @if (uploadModalOpen()) {
-        <div class="modal-backdrop" (click)="closeUploadModal()">
-          <div class="modal-content" (click)="$event.stopPropagation()">
+      <!-- Modal de Detalhes Completos (Eye Icon) -->
+      @if (selectedLancamento()) {
+        <div class="modal-backdrop" (click)="closeDetailsModal()">
+          <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
             <div class="modal-header">
-              <h2>Comprovante / Nota Fiscal</h2>
-              <button class="modal-close" (click)="closeUploadModal()">×</button>
+              <div class="header-left">
+                <span class="header-badge">ID #{{ selectedLancamento()!.id }}</span>
+                <h2 class="modal-title">Detalhes do Lançamento</h2>
+              </div>
+              <button class="btn-close" (click)="closeDetailsModal()">✕</button>
             </div>
 
-            <div class="upload-modal-body">
-              <p>Lançamento: <strong>{{ selectedLancamentoForUpload?.descricao }}</strong></p>
-              <p>Fornecedor: <strong>{{ selectedLancamentoForUpload?.fornecedor }}</strong> | Valor: <strong>{{ selectedLancamentoForUpload?.valorBrl | currencyBrl }}</strong></p>
+            <div class="modal-body details-body">
+              <div class="details-section">
+                <h4 class="section-title">Informações Principais</h4>
+                <div class="details-grid">
+                  <div class="detail-item full-width">
+                    <span class="detail-label">Descrição do Gasto</span>
+                    <span class="detail-value text-lg"><strong>{{ selectedLancamento()!.descricao }}</strong></span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Fornecedor / Beneficiário</span>
+                    <span class="detail-value">{{ selectedLancamento()!.fornecedor }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Número da NF / Comprovante</span>
+                    <span class="detail-value">
+                      @if (selectedLancamento()!.numeroNotaFiscal) {
+                        <code>{{ selectedLancamento()!.numeroNotaFiscal }}</code>
+                      } @else {
+                        <span class="text-muted">Não informado</span>
+                      }
+                    </span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Data de Competência</span>
+                    <span class="detail-value">{{ selectedLancamento()!.data | date:'dd/MM/yyyy' }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Forma de Pagamento</span>
+                    <span class="detail-value">{{ selectedLancamento()!.formaPagamento }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Evento Vinculado</span>
+                    <span class="detail-value"><span class="badge badge-blue">{{ selectedLancamento()!.eventoNome }}</span></span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Categoria de Custo</span>
+                    <span class="detail-value"><span class="badge badge-purple">{{ selectedLancamento()!.categoriaNome }}</span></span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Status da Transação</span>
+                    <span class="detail-value">
+                      <span class="status-pill" [style.background-color]="selectedLancamento()!.statusCorBadge + '22'" [style.color]="selectedLancamento()!.statusCorBadge">
+                        {{ selectedLancamento()!.statusNome }}
+                      </span>
+                    </span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Registrado por</span>
+                    <span class="detail-value">{{ selectedLancamento()!.responsavelNome || 'Sistema' }}</span>
+                  </div>
+                </div>
+              </div>
 
-              @if (selectedLancamentoForUpload?.anexoUrl) {
-                <div class="current-attachment">
-                  <span class="attachment-label">Arquivo atual:</span>
-                  <strong>{{ selectedLancamentoForUpload?.anexoNomeOriginal || 'comprovante.pdf' }}</strong>
-                  <div class="attachment-actions">
-                    <a [href]="'/api/lancamentos/' + selectedLancamentoForUpload?.id + '/anexo'" target="_blank" class="btn btn-sm btn-outline">
-                      Abrir Anexo
-                    </a>
-                    <button class="btn btn-sm btn-danger" (click)="removeAnexo(selectedLancamentoForUpload?.id!)">
-                      Excluir Anexo
+              <!-- Seção de Câmbio e Taxas -->
+              <div class="details-section">
+                <h4 class="section-title">Valores & Breakdown Cambial</h4>
+                <div class="cambio-breakdown-card">
+                  <div class="breakdown-grid">
+                    <div class="b-item highlight-green">
+                      <span class="b-label">Valor Pago ao Fornecedor</span>
+                      <strong class="b-val">{{ selectedLancamento()!.valorBrl | currencyBrl }}</strong>
+                      <small>Valor líquido da nota fiscal</small>
+                    </div>
+                    <div class="b-item highlight-amber">
+                      <span class="b-label">Valor Debitado do Orçamento</span>
+                      <strong class="b-val">US$ {{ selectedLancamento()!.valorUsd | number:'1.2-2' }}</strong>
+                      <small>Cobrança internacional</small>
+                    </div>
+                    <div class="b-item">
+                      <span class="b-label">Taxa Efetiva de Câmbio</span>
+                      <strong class="b-val">R$ {{ selectedLancamento()!.taxaCambioUsada | number:'1.4-4' }}</strong>
+                      <small>Cotação real do gasto</small>
+                    </div>
+                    <div class="b-item highlight-warning">
+                      <span class="b-label">Taxas Bancárias / Spread</span>
+                      <strong class="b-val">R$ {{ calcularTaxaRetida(selectedLancamento()!) | number:'1.2-2' }}</strong>
+                      <small>Custo de conversão retido</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              @if (selectedLancamento()!.observacoes) {
+                <div class="details-section">
+                  <h4 class="section-title">Observações</h4>
+                  <p class="notes-text">{{ selectedLancamento()!.observacoes }}</p>
+                </div>
+              }
+
+              @if (selectedLancamento()!.anexoUrl) {
+                <div class="details-section">
+                  <h4 class="section-title">Comprovante / Nota Fiscal</h4>
+                  <div class="anexo-box">
+                    <span>📎 {{ selectedLancamento()!.anexoNomeOriginal || 'Nota_Fiscal.pdf' }}</span>
+                    <button class="btn btn-sm btn-primary" (click)="downloadAnexo(selectedLancamento()!)">
+                      Baixar / Visualizar Arquivo
                     </button>
                   </div>
                 </div>
               }
+            </div>
 
-              <div class="file-upload-area">
-                <label class="form-label">Enviar novo comprovante (PDF, JPG, PNG - máx 10MB):</label>
-                <input type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf" class="form-control">
-              </div>
-
-              <div class="modal-footer">
-                <button type="button" class="btn btn-outline" (click)="closeUploadModal()">Fechar</button>
-                <button type="button" class="btn btn-primary" [disabled]="!selectedFile" (click)="uploadFile()">
-                  Enviar Arquivo
-                </button>
-              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline" (click)="closeDetailsModal()">Fechar</button>
             </div>
           </div>
         </div>
@@ -531,651 +477,677 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
   `,
   styles: [`
     .page-container {
-      max-width: 1400px;
+      max-width: 1440px;
       margin: 0 auto;
-      padding: 2rem 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+      padding: 1.5rem;
     }
     .page-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
       gap: 1rem;
     }
     .page-title {
       font-size: 1.75rem;
-      color: var(--color-navy);
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 0.25rem;
     }
     .page-subtitle {
-      font-size: 0.9rem;
-      color: var(--color-text-secondary);
-      margin-top: 0.25rem;
+      font-size: 0.88rem;
+      color: #94A3B8;
     }
+
+    /* Filtros Alinhados */
     .filter-card {
+      background: #161D26;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
       padding: 1.25rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     .filters-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 1rem;
+      align-items: flex-end;
     }
-    .filter-actions {
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .form-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #CBD5E1;
+      white-space: nowrap;
+      &.required::after {
+        content: ' *';
+        color: #EF4444;
+      }
+    }
+    .form-control, .form-select {
+      background: #0F1722;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #FFFFFF;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      height: 38px;
+      &:focus {
+        border-color: #FF9900;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.2);
+      }
+    }
+    .filter-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-top: 1px solid var(--color-border-light);
+      margin-top: 1.25rem;
       padding-top: 1rem;
-      margin-top: 0.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .filter-stats {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .stat-count {
+      font-size: 0.82rem;
+      color: #94A3B8;
     }
     .filter-total {
-      font-size: 0.95rem;
-      color: var(--color-navy);
-      strong {
-        color: var(--color-amber-hover);
-        font-size: 1.2rem;
-        margin-left: 0.5rem;
-      }
-    }
-    .supplier-text {
-      font-size: 0.75rem;
-      color: var(--color-text-secondary);
-    }
-    .text-muted {
-      color: var(--color-text-muted);
-    }
-    .cambio-tag {
-      font-size: 0.75rem;
-      background: #F1F5F9;
-      border: 1px solid var(--color-border);
-      padding: 0.2rem 0.5rem;
-      border-radius: var(--radius-sm);
-      color: var(--color-navy);
-      font-weight: 600;
-    }
-    .btn-anexo {
-      color: var(--color-blue);
-      border-color: var(--color-blue);
-      &:hover { background: var(--color-blue-subtle); }
-    }
-    .btn-upload {
-      font-size: 0.75rem;
-      border-style: dashed;
-    }
-    .btn-view {
-      color: var(--color-navy);
-      font-weight: 600;
-      &:hover { background: #F1F5F9; }
-    }
-    .action-buttons {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.35rem;
-      flex-wrap: wrap;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 3rem 1rem;
-      color: var(--color-text-muted);
-    }
-    .form-row {
-      display: flex;
-      gap: 1rem;
-    }
-    .flex-1 { flex: 1; }
-    .input-prefix-group {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      .prefix {
-        font-weight: 700;
-        color: var(--color-navy);
-      }
+      background: rgba(255, 153, 0, 0.08);
+      border: 1px solid rgba(255, 153, 0, 0.25);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
     }
-    .label-with-action {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .total-label {
+      font-size: 0.82rem;
+      color: #CBD5E1;
     }
-    .btn-link {
-      background: none;
-      border: none;
-      color: var(--color-blue);
-      font-size: 0.75rem;
+    .total-val {
+      font-size: 1.05rem;
+      color: #FF9900;
       font-weight: 700;
-      cursor: pointer;
-      padding: 0;
-      &:hover { text-decoration: underline; }
     }
 
-    /* Form Câmbio Section */
-    .form-cambio-section {
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
-      border-radius: var(--radius-md);
-      padding: 1.25rem;
-      margin-bottom: 1rem;
+    /* Tabela Fluida Sem Scroll */
+    .table-card {
+      background: #161D26;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      width: 100%;
     }
-    .conversion-live-breakdown {
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      margin-top: 0.75rem;
-      padding-top: 0.75rem;
-      border-top: 1px dashed #CBD5E1;
-      font-size: 0.8rem;
+    .responsive-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+
+      thead {
+        background: #0E1620;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+        th {
+          padding: 0.85rem 1rem;
+          font-weight: 600;
+          color: #94A3B8;
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+      }
+
+      tbody tr {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        transition: background-color 0.15s ease;
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.025);
+        }
+        &:last-child {
+          border-bottom: none;
+        }
+        td {
+          padding: 0.85rem 1rem;
+          vertical-align: middle;
+        }
+      }
     }
-    .breakdown-item {
+
+    .date-badge {
+      font-weight: 600;
+      color: #E2E8F0;
+      white-space: nowrap;
+    }
+    .item-title {
+      display: block;
+      color: #FFFFFF;
+      font-size: 0.88rem;
+      margin-bottom: 0.15rem;
+    }
+    .supplier-text {
+      font-size: 0.78rem;
+      color: #94A3B8;
+      span { color: #CBD5E1; }
+    }
+    .event-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #CBD5E1;
+      margin-bottom: 0.2rem;
+    }
+    .category-pill {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: 0.15rem 0.45rem;
+      background: rgba(147, 51, 234, 0.15);
+      color: #C084FC;
+      border: 1px solid rgba(147, 51, 234, 0.3);
+      border-radius: 4px;
+    }
+    .nf-code {
+      background: rgba(255, 255, 255, 0.06);
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      color: #E2E8F0;
+    }
+    .val-brl {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #FFFFFF;
+    }
+    .val-usd-meta {
       display: flex;
       align-items: center;
       gap: 0.4rem;
-      color: var(--color-text-secondary);
-      strong { color: var(--color-navy); }
+      margin-top: 0.15rem;
+    }
+    .val-usd {
+      font-size: 0.78rem;
+      color: #94A3B8;
+    }
+    .cambio-rate {
+      font-size: 0.72rem;
+      color: #64748B;
+    }
+    .fee-loss-tag {
+      font-size: 0.7rem;
+      color: #F59E0B;
+      margin-top: 0.1rem;
     }
 
-    /* Modais */
-    .modal-large {
-      max-width: 780px;
-    }
-    .modal-header {
+    .status-stack {
       display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
       align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 1.5rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 1px solid var(--color-border);
     }
-    .modal-subtitle {
-      font-size: 0.85rem;
-      color: var(--color-text-secondary);
-      margin-top: 0.2rem;
+    .status-pill {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border: 1px solid;
     }
-    .modal-close {
+    .btn-anexo {
       background: transparent;
-      border: none;
-      font-size: 1.5rem;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #38BDF8;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.72rem;
       cursor: pointer;
-      color: var(--color-text-secondary);
-      &:hover { color: var(--color-navy); }
-    }
-    .modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      margin-top: 1.75rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--color-border-light);
+      &:hover {
+        background: rgba(56, 189, 248, 0.15);
+      }
     }
 
-    /* Details View Styling */
-    .details-container {
+    .actions-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      justify-content: flex-end;
+    }
+    .btn-details {
+      font-size: 0.78rem;
+      padding: 0.35rem 0.6rem;
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #E2E8F0;
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+    }
+    .btn-icon {
+      padding: 0.35rem 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    /* Painel de Cálculo de Câmbio no Modal */
+    .cambio-calc-card {
+      background: rgba(255, 153, 0, 0.04);
+      border: 1px solid rgba(255, 153, 0, 0.25);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .calc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+    .calc-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #FF9900;
+    }
+    .calc-badge {
+      font-size: 0.75rem;
+      color: #CBD5E1;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+    }
+    .input-prefix-group {
+      display: flex;
+      align-items: center;
+      background: #0F1722;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      overflow: hidden;
+      .input-prefix {
+        padding: 0 0.6rem;
+        font-size: 0.8rem;
+        color: #94A3B8;
+        background: rgba(255, 255, 255, 0.04);
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .form-control {
+        border: none;
+        border-radius: 0;
+        &:focus { box-shadow: none; }
+      }
+    }
+    .calc-summary-box {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: #0F1722;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+    }
+    .sum-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .sum-label {
+      font-size: 0.7rem;
+      color: #94A3B8;
+    }
+    .sum-val {
+      font-size: 0.95rem;
+    }
+
+    /* Modal Details */
+    .details-body {
       display: flex;
       flex-direction: column;
       gap: 1.25rem;
     }
-    .details-section {
-      border-bottom: 1px solid var(--color-border-light);
-      padding-bottom: 1.25rem;
-      &:last-child { border-bottom: none; }
-    }
     .section-title {
-      font-size: 0.95rem;
+      font-size: 0.88rem;
       font-weight: 700;
-      color: var(--color-navy);
+      color: #CBD5E1;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
       margin-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 0.35rem;
     }
     .details-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
     }
     .detail-item {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
-      &.full-row {
-        grid-column: 1 / -1;
-      }
+      gap: 0.15rem;
+      &.full-width { grid-column: span 2; }
     }
     .detail-label {
-      font-size: 0.75rem;
-      font-weight: 700;
+      font-size: 0.72rem;
+      color: #94A3B8;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--color-text-muted);
     }
-    .detail-val {
+    .detail-value {
       font-size: 0.9rem;
-      color: var(--color-navy);
-      font-weight: 500;
+      color: #FFFFFF;
+      &.text-lg { font-size: 1.05rem; }
     }
-    .detail-val-highlight {
-      font-size: 1.2rem;
-      color: var(--color-navy);
-    }
-    .cambio-details-box {
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
-      border-radius: var(--radius-md);
-      padding: 1.25rem;
-    }
-    .financial-cards-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-    .fin-card {
-      background: #FFFFFF;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-sm);
+    .cambio-breakdown-card {
+      background: #0F1722;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
       padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      &.fin-brl { border-left: 4px solid var(--color-amber); }
-      &.fin-usd { border-left: 4px solid var(--color-blue); }
     }
-    .fin-label {
-      font-size: 0.75rem;
-      color: var(--color-text-secondary);
-      font-weight: 600;
-    }
-    .fin-value {
-      font-size: 1.4rem;
-      font-weight: 800;
-      color: var(--color-navy);
-      margin: 0.1rem 0;
-    }
-    .market-comparison-bar {
-      background: #FFFBEB;
-      border: 1px solid #FDE68A;
-      border-radius: var(--radius-sm);
-      padding: 0.75rem 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .comparison-header {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.85rem;
-      color: #92400E;
-    }
-    .comparison-body {
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1rem;
-      font-size: 0.8rem;
-    }
-    .comp-col {
-      display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
-      color: #78350F;
-    }
-    .observacoes-box {
-      background: #F8FAFC;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-sm);
-      padding: 0.85rem;
-      font-size: 0.85rem;
-      color: #334155;
-      line-height: 1.5;
-      margin-top: 0.35rem;
-    }
-    .attachment-view-box {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #FFFFFF;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-sm);
-      padding: 0.85rem 1rem;
-      margin-top: 0.35rem;
-    }
-    .att-info {
-      display: flex;
-      align-items: center;
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
       gap: 0.75rem;
     }
-    .att-icon {
-      font-size: 1.5rem;
+    .b-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      small { font-size: 0.7rem; color: #64748B; }
     }
-    .no-attachment-box {
+    .b-label { font-size: 0.72rem; color: #94A3B8; }
+    .b-val { font-size: 1.05rem; color: #FFFFFF; }
+    .highlight-green .b-val { color: #10B981; }
+    .highlight-amber .b-val { color: #F59E0B; }
+    .highlight-warning .b-val { color: #EF4444; }
+
+    .anexo-box {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.85rem;
-      background: #F8FAFC;
-      border: 1px dashed var(--color-border);
-      border-radius: var(--radius-sm);
-      margin-top: 0.35rem;
+      background: #0F1722;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .notes-text {
+      background: #0F1722;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      color: #E2E8F0;
       font-size: 0.85rem;
-      color: var(--color-text-muted);
+      line-height: 1.5;
     }
-    .current-attachment {
-      background: #F8FAFC;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-sm);
-      padding: 1rem;
-      margin: 1rem 0;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .attachment-actions {
-      display: flex;
-      gap: 0.5rem;
-    }
-    .file-upload-area {
-      margin-top: 1rem;
-    }
-    @media (max-width: 768px) {
-      .financial-cards-row {
-        grid-template-columns: 1fr;
+
+    @media (max-width: 992px) {
+      .summary-grid, .breakdown-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
       .details-grid {
         grid-template-columns: 1fr;
-      }
-      .attachment-view-box {
-        flex-direction: column;
-        gap: 0.75rem;
-        align-items: stretch;
-        text-align: center;
-      }
-      .filter-actions {
-        flex-direction: column;
-        gap: 0.75rem;
-        align-items: stretch;
-        text-align: center;
-      }
-      .conversion-live-breakdown {
-        flex-direction: column;
-        gap: 0.5rem;
+        .detail-item.full-width { grid-column: span 1; }
       }
     }
   `]
 })
 export class LancamentosComponent implements OnInit {
-  apiService = inject(ApiService);
+  private api = inject(ApiService);
   authService = inject(AuthService);
-  toast = inject(ToastService);
+  private toast = inject(ToastService);
 
   lancamentos = signal<Lancamento[]>([]);
   eventos = signal<Evento[]>([]);
   categorias = signal<Categoria[]>([]);
   statusList = signal<StatusFinanceiro[]>([]);
-  taxaCambio = signal<number>(5.50);
-  cotacaoOficialMercado = signal<CotacaoDolar | null>(null);
+  cotacaoMercado = signal<CotacaoDolar | null>(null);
+
+  selectedLancamento = signal<Lancamento | null>(null);
+  showModal = signal(false);
+  editingId = signal<number | null>(null);
+  saving = signal(false);
 
   filters = {
+    busca: '',
     eventoId: undefined as number | undefined,
     categoriaId: undefined as number | undefined,
     statusId: undefined as number | undefined,
     dataInicio: '',
-    dataFim: '',
-    busca: ''
+    dataFim: ''
   };
 
-  modalOpen = signal(false);
-  isEditing = signal(false);
-  editingId: number | null = null;
-
-  // Modal de Detalhes
-  detailsModalOpen = signal(false);
-  selectedLancamentoForDetails: Lancamento | null = null;
-
-  uploadModalOpen = signal(false);
-  selectedLancamentoForUpload: Lancamento | null = null;
-  selectedFile: File | null = null;
-
-  formData: Partial<Lancamento> = {
-    data: new Date().toISOString().substring(0, 10),
-    descricao: '',
-    fornecedor: '',
-    numeroNotaFiscal: '',
-    eventoId: undefined,
-    categoriaId: undefined,
+  formData: Partial<Lancamento> & { eventoId?: number; categoriaId?: number; statusId?: number } = {
+    data: new Date().toISOString().split('T')[0],
     valorBrl: 0,
     valorUsd: 0,
-    taxaCambioUsada: 5.50,
-    formaPagamento: 'PIX',
-    statusId: undefined,
-    observacoes: ''
+    taxaCambioUsada: 5.5000,
+    formaPagamento: 'Cartão de Crédito'
   };
 
+  selectedFile: File | null = null;
+  selectedFileName = '';
+
   ngOnInit() {
-    this.loadEventos();
-    this.loadCategorias();
-    this.loadStatus();
-    this.loadConfig();
-    this.loadCotacaoMercado();
-    this.applyFilters();
+    this.loadData();
   }
 
-  loadEventos() {
-    this.apiService.getEventos().subscribe(res => this.eventos.set(res));
-  }
-
-  loadCategorias() {
-    this.apiService.getCategorias().subscribe(res => this.categorias.set(res));
-  }
-
-  loadStatus() {
-    this.apiService.getStatusFinanceiros().subscribe(res => this.statusList.set(res));
-  }
-
-  loadConfig() {
-    this.apiService.getConfiguracao().subscribe(cfg => {
-      this.taxaCambio.set(cfg.taxaCambioUsdBrl);
-      if (!this.formData.taxaCambioUsada) {
-        this.formData.taxaCambioUsada = cfg.taxaCambioUsdBrl;
-      }
+  loadData() {
+    this.api.getLancamentos().subscribe({
+      next: (data) => this.lancamentos.set(data),
+      error: () => this.toast.error('Erro ao carregar lançamentos.')
     });
-  }
 
-  loadCotacaoMercado() {
-    this.apiService.getCotacaoDolarAtual().subscribe({
-      next: (c) => this.cotacaoOficialMercado.set(c),
-      error: () => {}
-    });
+    this.api.getEventos().subscribe(data => this.eventos.set(data));
+    this.api.getCategorias().subscribe(data => this.categorias.set(data));
+    this.api.getStatusFinanceiros().subscribe(data => this.statusList.set(data));
+    this.api.getCotacaoDolarAtual().subscribe(data => this.cotacaoMercado.set(data));
   }
 
   applyFilters() {
-    this.apiService.getLancamentos(this.filters).subscribe(res => {
-      this.lancamentos.set(res);
+    this.api.getLancamentos(this.filters).subscribe({
+      next: (data) => this.lancamentos.set(data)
     });
   }
 
   clearFilters() {
     this.filters = {
+      busca: '',
       eventoId: undefined,
       categoriaId: undefined,
       statusId: undefined,
       dataInicio: '',
-      dataFim: '',
-      busca: ''
+      dataFim: ''
     };
     this.applyFilters();
   }
 
   totalFiltradoBrl(): number {
-    return this.lancamentos().reduce((acc, curr) => acc + (Number(curr.valorBrl) || 0), 0);
+    return this.lancamentos().reduce((acc, curr) => acc + (curr.valorBrl || 0), 0);
   }
 
-  getTaxaAtiva(): number {
-    return (this.formData.taxaCambioUsada && this.formData.taxaCambioUsada > 0)
-      ? this.formData.taxaCambioUsada
-      : this.taxaCambio();
-  }
-
+  // Cálculos Inteligentes
   onBrlChange() {
-    const taxa = this.getTaxaAtiva();
-    if (this.formData.valorBrl !== undefined && this.formData.valorBrl !== null && taxa > 0) {
-      this.formData.valorUsd = Number((this.formData.valorBrl / taxa).toFixed(2));
+    const brl = Number(this.formData.valorBrl) || 0;
+    const usd = Number(this.formData.valorUsd) || 0;
+    const taxa = Number(this.formData.taxaCambioUsada) || 0;
+
+    if (usd > 0) {
+      // Se USD já está preenchido, calcula a taxa efetiva (ex: R$ 630 / US$ 140.11 = 4.4964)
+      this.formData.taxaCambioUsada = Number((brl / usd).toFixed(4));
+    } else if (taxa > 0) {
+      this.formData.valorUsd = Number((brl / taxa).toFixed(2));
     }
   }
 
   onUsdChange() {
-    const taxa = this.getTaxaAtiva();
-    if (this.formData.valorUsd !== undefined && this.formData.valorUsd !== null && taxa > 0) {
-      this.formData.valorBrl = Number((this.formData.valorUsd * taxa).toFixed(2));
+    const brl = Number(this.formData.valorBrl) || 0;
+    const usd = Number(this.formData.valorUsd) || 0;
+    const taxa = Number(this.formData.taxaCambioUsada) || 0;
+
+    if (brl > 0 && usd > 0) {
+      this.formData.taxaCambioUsada = Number((brl / usd).toFixed(4));
+    } else if (usd > 0 && taxa > 0) {
+      this.formData.valorBrl = Number((usd * taxa).toFixed(2));
     }
   }
 
   onTaxaChange() {
-    if (this.formData.valorUsd && this.formData.valorUsd > 0) {
-      this.onUsdChange();
-    } else if (this.formData.valorBrl && this.formData.valorBrl > 0) {
-      this.onBrlChange();
+    const usd = Number(this.formData.valorUsd) || 0;
+    const taxa = Number(this.formData.taxaCambioUsada) || 0;
+    if (usd > 0 && taxa > 0) {
+      this.formData.valorBrl = Number((usd * taxa).toFixed(2));
     }
   }
 
-  usarCotacaoMercadoNoForm() {
-    const taxa = this.cotacaoOficialMercado()?.cotacaoOficial;
-    if (taxa) {
-      this.formData.taxaCambioUsada = Number(taxa.toFixed(4));
-      this.onTaxaChange();
-      this.toast.info(`Cotação de mercado R$ ${this.formData.taxaCambioUsada} aplicada.`);
+  modalTaxaRetida(): number {
+    const usd = Number(this.formData.valorUsd) || 0;
+    const brl = Number(this.formData.valorBrl) || 0;
+    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.0700;
+    const valorSpotTeorico = usd * spot;
+    return Math.max(0, valorSpotTeorico - brl);
+  }
+
+  modalPctSpread(): number {
+    const usd = Number(this.formData.valorUsd) || 0;
+    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.0700;
+    const valorSpotTeorico = usd * spot;
+    if (valorSpotTeorico <= 0) return 0;
+    return (this.modalTaxaRetida() / valorSpotTeorico) * 100;
+  }
+
+  calcularTaxaRetida(item: Lancamento): number {
+    if (!item.valorUsd || item.valorUsd <= 0 || !item.valorBrl) return 0;
+    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.0700;
+    const valorSpotTeorico = item.valorUsd * spot;
+    return Math.max(0, valorSpotTeorico - item.valorBrl);
+  }
+
+  openModal(item?: Lancamento) {
+    if (item) {
+      this.editingId.set(item.id || null);
+      this.formData = {
+        ...item,
+        eventoId: item.eventoId,
+        categoriaId: item.categoriaId,
+        statusId: item.statusId
+      };
+    } else {
+      this.editingId.set(null);
+      const defaultTaxa = this.cotacaoMercado()?.cotacaoOficial ? Number((this.cotacaoMercado()!.cotacaoOficial * 0.97).toFixed(4)) : 5.5000;
+      this.formData = {
+        data: new Date().toISOString().split('T')[0],
+        valorBrl: 0,
+        valorUsd: 0,
+        taxaCambioUsada: defaultTaxa,
+        formaPagamento: 'Cartão de Crédito'
+      };
     }
-  }
-
-  // Modal de Detalhes
-  openDetailsModal(item: Lancamento) {
-    this.selectedLancamentoForDetails = item;
-    this.detailsModalOpen.set(true);
-  }
-
-  closeDetailsModal() {
-    this.detailsModalOpen.set(false);
-    this.selectedLancamentoForDetails = null;
-  }
-
-  openModal() {
-    this.isEditing.set(false);
-    this.editingId = null;
-    this.formData = {
-      data: new Date().toISOString().substring(0, 10),
-      descricao: '',
-      fornecedor: '',
-      numeroNotaFiscal: '',
-      eventoId: this.eventos()[0]?.id ?? undefined,
-      categoriaId: this.categorias()[0]?.id ?? undefined,
-      valorBrl: 0,
-      valorUsd: 0,
-      taxaCambioUsada: this.taxaCambio(),
-      formaPagamento: 'PIX',
-      statusId: this.statusList()[0]?.id ?? undefined,
-      observacoes: ''
-    };
-    this.modalOpen.set(true);
-  }
-
-  editLancamento(item: Lancamento) {
-    this.isEditing.set(true);
-    this.editingId = item.id!;
-    this.formData = {
-      data: item.data,
-      descricao: item.descricao,
-      fornecedor: item.fornecedor,
-      numeroNotaFiscal: item.numeroNotaFiscal,
-      eventoId: item.eventoId,
-      categoriaId: item.categoriaId,
-      valorBrl: item.valorBrl,
-      valorUsd: item.valorUsd,
-      taxaCambioUsada: item.taxaCambioUsada || this.taxaCambio(),
-      formaPagamento: item.formaPagamento,
-      statusId: item.statusId,
-      observacoes: item.observacoes
-    };
-    this.modalOpen.set(true);
+    this.selectedFile = null;
+    this.selectedFileName = '';
+    this.showModal.set(true);
   }
 
   closeModal() {
-    this.modalOpen.set(false);
+    this.showModal.set(false);
+    this.editingId.set(null);
   }
 
-  saveLancamento() {
-    if (this.isEditing() && this.editingId) {
-      this.apiService.updateLancamento(this.editingId, this.formData).subscribe({
-        next: () => {
-          this.toast.success('Lançamento atualizado com sucesso!');
-          this.closeModal();
-          this.applyFilters();
-        },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao atualizar lançamento.')
-      });
-    } else {
-      this.apiService.createLancamento(this.formData).subscribe({
-        next: () => {
-          this.toast.success('Lançamento registrado com sucesso!');
-          this.closeModal();
-          this.applyFilters();
-        },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao criar lançamento.')
-      });
-    }
+  openDetailsModal(item: Lancamento) {
+    this.selectedLancamento.set(item);
   }
 
-  deleteLancamento(id: number) {
-    if (confirm('Tem certeza que deseja excluir este lançamento?')) {
-      this.apiService.deleteLancamento(id).subscribe({
-        next: () => {
-          this.toast.success('Lançamento excluído com sucesso.');
-          this.applyFilters();
-        },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao excluir lançamento.')
-      });
-    }
-  }
-
-  openUploadModal(item: Lancamento) {
-    this.selectedLancamentoForUpload = item;
-    this.selectedFile = null;
-    this.uploadModalOpen.set(true);
-  }
-
-  closeUploadModal() {
-    this.uploadModalOpen.set(false);
-    this.selectedLancamentoForUpload = null;
-    this.selectedFile = null;
+  closeDetailsModal() {
+    this.selectedLancamento.set(null);
   }
 
   onFileSelected(event: any) {
-    const file: File = event.target.files[0];
+    const file = event.target.files[0];
     if (file) {
       this.selectedFile = file;
+      this.selectedFileName = file.name;
     }
   }
 
-  uploadFile() {
-    if (!this.selectedLancamentoForUpload?.id || !this.selectedFile) return;
+  salvar() {
+    this.saving.set(true);
+    const req = {
+      data: this.formData.data!,
+      descricao: this.formData.descricao!,
+      fornecedor: this.formData.fornecedor!,
+      numeroNotaFiscal: this.formData.numeroNotaFiscal,
+      eventoId: this.formData.eventoId!,
+      categoriaId: this.formData.categoriaId!,
+      valorBrl: Number(this.formData.valorBrl) || 0,
+      valorUsd: Number(this.formData.valorUsd) || 0,
+      taxaCambioUsada: Number(this.formData.taxaCambioUsada) || 5.5000,
+      formaPagamento: this.formData.formaPagamento!,
+      statusId: this.formData.statusId,
+      observacoes: this.formData.observacoes
+    };
 
-    this.apiService.uploadAnexoLancamento(this.selectedLancamentoForUpload.id, this.selectedFile).subscribe({
-      next: (updated) => {
-        this.toast.success('Comprovante anexado com sucesso!');
-        this.closeUploadModal();
-        this.applyFilters();
+    const action = this.editingId()
+      ? this.api.updateLancamento(this.editingId()!, req)
+      : this.api.createLancamento(req);
+
+    action.subscribe({
+      next: (res) => {
+        if (this.selectedFile && res.id) {
+          this.api.uploadAnexoLancamento(res.id, this.selectedFile).subscribe({
+            next: () => {
+              this.toast.success('Lançamento e anexo salvos com sucesso!');
+              this.loadData();
+              this.closeModal();
+              this.saving.set(false);
+            },
+            error: () => {
+              this.toast.warning('Lançamento salvo, mas erro ao enviar anexo.');
+              this.loadData();
+              this.closeModal();
+              this.saving.set(false);
+            }
+          });
+        } else {
+          this.toast.success(this.editingId() ? 'Lançamento atualizado!' : 'Lançamento registrado!');
+          this.loadData();
+          this.closeModal();
+          this.saving.set(false);
+        }
       },
-      error: (err) => this.toast.error(err.error?.message || 'Erro ao anexar arquivo.')
+      error: () => {
+        this.toast.error('Erro ao salvar lançamento.');
+        this.saving.set(false);
+      }
     });
   }
 
-  removeAnexo(id: number) {
-    if (confirm('Deseja realmente remover o comprovante deste lançamento?')) {
-      this.apiService.removeAnexoLancamento(id).subscribe({
+  excluir(id: number) {
+    if (confirm('Tem certeza que deseja excluir este lançamento?')) {
+      this.api.deleteLancamento(id).subscribe({
         next: () => {
-          this.toast.success('Anexo removido.');
-          this.closeUploadModal();
-          this.applyFilters();
+          this.toast.success('Lançamento excluído com sucesso.');
+          this.loadData();
         },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao remover anexo.')
+        error: () => this.toast.error('Erro ao excluir lançamento.')
       });
     }
+  }
+
+  downloadAnexo(item: Lancamento) {
+    if (!item.id) return;
+    this.api.downloadAnexoLancamento(item.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.anexoNomeOriginal || `anexo_${item.id}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => this.toast.error('Erro ao baixar anexo.')
+    });
   }
 }

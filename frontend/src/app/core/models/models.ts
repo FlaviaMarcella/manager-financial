@@ -29,6 +29,7 @@ export interface Evento {
   nome: string;
   data: string;
   status: StatusEvento;
+  descricao?: string;
 }
 
 export interface Categoria {

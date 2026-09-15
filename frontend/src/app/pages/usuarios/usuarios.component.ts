@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
@@ -13,17 +13,19 @@ type FilterTab = 'PENDENTES' | 'ATIVOS' | 'TODOS';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="page-container">
-      <!-- Cabeçalho -->
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">Gestão de Usuários e Acessos</h1>
-          <p class="page-subtitle">Aprovação de novos acessos, controle de permissões e governança de dados</p>
+    <div [class.page-container]="!isModal" [class.modal-view-container]="isModal">
+      @if (!isModal) {
+        <!-- Cabeçalho -->
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Gestão de Usuários e Acessos</h1>
+            <p class="page-subtitle">Aprovação de novos acessos, controle de permissões e governança de dados</p>
+          </div>
+          <button class="btn btn-outline btn-sm" (click)="loadUsuarios()">
+            🔄 Atualizar Lista
+          </button>
         </div>
-        <button class="btn btn-outline btn-sm" (click)="loadUsuarios()">
-          🔄 Atualizar Lista
-        </button>
-      </div>
+      }
 
       <!-- KPI Summary Cards -->
       <div class="kpi-grid">
@@ -190,6 +192,10 @@ type FilterTab = 'PENDENTES' | 'ATIVOS' | 'TODOS';
     </div>
   `,
   styles: [`
+    .modal-view-container {
+      padding: 0.5rem 0;
+      width: 100%;
+    }
     .page-container {
       max-width: 1400px;
       margin: 0 auto;
@@ -385,6 +391,8 @@ type FilterTab = 'PENDENTES' | 'ATIVOS' | 'TODOS';
   `]
 })
 export class UsuariosComponent implements OnInit {
+  @Input() isModal = false;
+  @Output() onClose = new EventEmitter<void>();
   apiService = inject(ApiService);
   authService = inject(AuthService);
   toast = inject(ToastService);

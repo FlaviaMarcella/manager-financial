@@ -121,21 +121,26 @@ public class LancamentoService {
                 .flatMap(usuarioRepository::findById)
                 .orElse(null);
 
-        BigDecimal taxaCambio = (request.getTaxaCambioUsada() != null && request.getTaxaCambioUsada().compareTo(BigDecimal.ZERO) > 0)
-                ? request.getTaxaCambioUsada()
-                : configService.getTaxaCambioAtual();
-
         BigDecimal valorBrl = request.getValorBrl();
         BigDecimal valorUsd = request.getValorUsd();
+        BigDecimal taxaCambio = request.getTaxaCambioUsada();
+
+        if (taxaCambio == null || taxaCambio.compareTo(BigDecimal.ZERO) <= 0) {
+            if (valorBrl != null && valorBrl.compareTo(BigDecimal.ZERO) > 0 && valorUsd != null && valorUsd.compareTo(BigDecimal.ZERO) > 0) {
+                taxaCambio = valorBrl.divide(valorUsd, 4, RoundingMode.HALF_UP);
+            } else {
+                taxaCambio = configService.getTaxaCambioAtual();
+            }
+        }
 
         if ((valorUsd == null || valorUsd.compareTo(BigDecimal.ZERO) == 0) && (valorBrl != null && valorBrl.compareTo(BigDecimal.ZERO) > 0)) {
-            if (taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
+            if (taxaCambio != null && taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
                 valorUsd = valorBrl.divide(taxaCambio, 2, RoundingMode.HALF_UP);
             } else {
                 valorUsd = BigDecimal.ZERO;
             }
         } else if ((valorBrl == null || valorBrl.compareTo(BigDecimal.ZERO) == 0) && (valorUsd != null && valorUsd.compareTo(BigDecimal.ZERO) > 0)) {
-            if (taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
+            if (taxaCambio != null && taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
                 valorBrl = valorUsd.multiply(taxaCambio).setScale(2, RoundingMode.HALF_UP);
             } else {
                 valorBrl = BigDecimal.ZERO;
@@ -177,21 +182,28 @@ public class LancamentoService {
             status = statusFinanceiroRepository.findById(request.getStatusId()).orElse(null);
         }
 
-        BigDecimal taxaCambio = (request.getTaxaCambioUsada() != null && request.getTaxaCambioUsada().compareTo(BigDecimal.ZERO) > 0)
-                ? request.getTaxaCambioUsada()
-                : (lancamento.getTaxaCambioUsada() != null ? lancamento.getTaxaCambioUsada() : configService.getTaxaCambioAtual());
-
         BigDecimal valorBrl = request.getValorBrl();
         BigDecimal valorUsd = request.getValorUsd();
+        BigDecimal taxaCambio = request.getTaxaCambioUsada();
+
+        if (taxaCambio == null || taxaCambio.compareTo(BigDecimal.ZERO) <= 0) {
+            if (valorBrl != null && valorBrl.compareTo(BigDecimal.ZERO) > 0 && valorUsd != null && valorUsd.compareTo(BigDecimal.ZERO) > 0) {
+                taxaCambio = valorBrl.divide(valorUsd, 4, RoundingMode.HALF_UP);
+            } else if (lancamento.getTaxaCambioUsada() != null) {
+                taxaCambio = lancamento.getTaxaCambioUsada();
+            } else {
+                taxaCambio = configService.getTaxaCambioAtual();
+            }
+        }
 
         if ((valorUsd == null || valorUsd.compareTo(BigDecimal.ZERO) == 0) && (valorBrl != null && valorBrl.compareTo(BigDecimal.ZERO) > 0)) {
-            if (taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
+            if (taxaCambio != null && taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
                 valorUsd = valorBrl.divide(taxaCambio, 2, RoundingMode.HALF_UP);
             } else {
                 valorUsd = BigDecimal.ZERO;
             }
         } else if ((valorBrl == null || valorBrl.compareTo(BigDecimal.ZERO) == 0) && (valorUsd != null && valorUsd.compareTo(BigDecimal.ZERO) > 0)) {
-            if (taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
+            if (taxaCambio != null && taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
                 valorBrl = valorUsd.multiply(taxaCambio).setScale(2, RoundingMode.HALF_UP);
             } else {
                 valorBrl = BigDecimal.ZERO;

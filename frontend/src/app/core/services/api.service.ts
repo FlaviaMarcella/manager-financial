@@ -87,6 +87,10 @@ export class ApiService {
     return this.http.get<ConfiguracaoGlobal>(`${this.baseUrl}/config`);
   }
 
+  updateTaxaCambio(taxa: number): Observable<ConfiguracaoGlobal> {
+    return this.http.put<ConfiguracaoGlobal>(`${this.baseUrl}/config`, { taxaCambioUsdBrl: taxa });
+  }
+
   updateConfiguracao(config: ConfiguracaoGlobal): Observable<ConfiguracaoGlobal> {
     return this.http.put<ConfiguracaoGlobal>(`${this.baseUrl}/config`, config);
   }
@@ -177,6 +181,10 @@ export class ApiService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<Lancamento>(`${this.baseUrl}/lancamentos/${id}/anexo`, formData);
+  }
+
+  downloadAnexoLancamento(id: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/lancamentos/${id}/anexo`, { responseType: 'blob' });
   }
 
   removeAnexoLancamento(id: number): Observable<Lancamento> {

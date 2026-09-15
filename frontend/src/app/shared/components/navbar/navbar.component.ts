@@ -2,11 +2,13 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ConfiguracoesComponent } from '../../../pages/configuracoes/configuracoes.component';
+import { UsuariosComponent } from '../../../pages/usuarios/usuarios.component';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, ConfiguracoesComponent, UsuariosComponent],
   template: `
     <header class="navbar">
       <div class="navbar-container">
@@ -25,7 +27,7 @@ import { AuthService } from '../../../core/services/auth.service';
           </a>
         </div>
 
-        <!-- 2. Menu de Navegação Centralizado (Centro) -->
+        <!-- 2. Menu de Navegação Centralizado (Centro) - 6 Módulos Principais -->
         <nav class="navbar-nav" [class.mobile-open]="mobileMenuOpen()">
           <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">
             <span class="nav-icon">📊</span>
@@ -51,22 +53,37 @@ import { AuthService } from '../../../core/services/auth.service';
             <span class="nav-icon">🎁</span>
             <span>Brindes</span>
           </a>
-          
+
+          <!-- Opções Admin no menu mobile -->
           @if (authService.isAdmin()) {
-            <span class="nav-divider"></span>
-            <a routerLink="/configuracoes" routerLinkActive="active" (click)="closeMenu()">
+            <div class="mobile-admin-divider"></div>
+            <button class="mobile-admin-btn" (click)="openConfigModal(); closeMenu()">
               <span class="nav-icon">⚙️</span>
-              <span>Configurações</span>
-            </a>
-            <a routerLink="/usuarios" routerLinkActive="active" (click)="closeMenu()">
+              <span>Configurações & Câmbio</span>
+            </button>
+            <button class="mobile-admin-btn" (click)="openUsersModal(); closeMenu()">
               <span class="nav-icon">👥</span>
-              <span>Usuários</span>
-            </a>
+              <span>Gestão de Usuários</span>
+            </button>
           }
         </nav>
 
-        <!-- 3. Usuário & Logout (Direita) -->
+        <!-- 3. Ações Admin, Usuário & Logout (Direita) -->
         <div class="navbar-actions">
+          @if (authService.isAdmin()) {
+            <div class="admin-quick-actions">
+              <button class="btn-admin-modal" (click)="openConfigModal()" title="Configurações do Sistema & Câmbio">
+                <span class="admin-icon">⚙️</span>
+                <span class="admin-label">Config</span>
+              </button>
+              <button class="btn-admin-modal" (click)="openUsersModal()" title="Gestão de Usuários & Permissões">
+                <span class="admin-icon">👥</span>
+                <span class="admin-label">Usuários</span>
+              </button>
+            </div>
+            <span class="action-divider"></span>
+          }
+
           @if (authService.currentUser(); as user) {
             <div class="user-pill" [title]="user.nome + ' (' + user.email + ')'">
               <div class="user-avatar">{{ user.nome.charAt(0).toUpperCase() }}</div>
@@ -93,6 +110,48 @@ import { AuthService } from '../../../core/services/auth.service';
       <!-- Backdrop móvel -->
       @if (mobileMenuOpen()) {
         <div class="menu-backdrop" (click)="closeMenu()"></div>
+      }
+
+      <!-- Modal de Configurações Acionado por Botão -->
+      @if (showConfigModal()) {
+        <div class="modal-backdrop modal-admin-backdrop" (click)="closeConfigModal()">
+          <div class="modal-content modal-admin-large" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <div class="modal-title-wrap">
+                <span class="modal-badge-icon">⚙️</span>
+                <div>
+                  <h2 class="modal-title">Configurações do Sistema & Câmbio</h2>
+                  <p class="modal-subtitle">Parâmetros de câmbio USD/BRL, simulador de spread, categorias e eventos</p>
+                </div>
+              </div>
+              <button class="btn-close" (click)="closeConfigModal()">✕</button>
+            </div>
+            <div class="modal-scroll-area">
+              <app-configuracoes [isModal]="true" (onClose)="closeConfigModal()"></app-configuracoes>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Modal de Gestão de Usuários Acionado por Botão -->
+      @if (showUsersModal()) {
+        <div class="modal-backdrop modal-admin-backdrop" (click)="closeUsersModal()">
+          <div class="modal-content modal-admin-large" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <div class="modal-title-wrap">
+                <span class="modal-badge-icon">👥</span>
+                <div>
+                  <h2 class="modal-title">Gestão de Usuários & Acessos</h2>
+                  <p class="modal-subtitle">Aprovação de solicitações pendentes, permissões e governança</p>
+                </div>
+              </div>
+              <button class="btn-close" (click)="closeUsersModal()">✕</button>
+            </div>
+            <div class="modal-scroll-area">
+              <app-usuarios [isModal]="true" (onClose)="closeUsersModal()"></app-usuarios>
+            </div>
+          </div>
+        </div>
       }
     </header>
   `,
@@ -189,15 +248,15 @@ import { AuthService } from '../../../core/services/auth.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.2rem;
+      gap: 0.35rem;
       flex: 1;
 
       a {
         color: #94A3B8;
         text-decoration: none;
-        padding: 0.45rem 0.7rem;
+        padding: 0.45rem 0.75rem;
         border-radius: 6px;
-        font-size: 0.84rem;
+        font-size: 0.85rem;
         font-weight: 500;
         transition: all 0.15s ease-in-out;
         display: flex;
@@ -225,22 +284,50 @@ import { AuthService } from '../../../core/services/auth.service';
           }
         }
       }
-
-      .nav-divider {
-        width: 1px;
-        height: 18px;
-        background-color: rgba(255, 255, 255, 0.12);
-        margin: 0 0.35rem;
-      }
     }
 
-    /* 3. Ações e Perfil */
+    /* 3. Ações Admin e Perfil */
     .navbar-actions {
       display: flex;
       align-items: center;
       justify-content: flex-end;
       gap: 0.65rem;
       flex-shrink: 0;
+    }
+
+    .admin-quick-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .btn-admin-modal {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #CBD5E1;
+      padding: 0.35rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.15s ease;
+
+      .admin-icon { font-size: 0.85rem; }
+      &:hover {
+        background: rgba(255, 153, 0, 0.15);
+        border-color: rgba(255, 153, 0, 0.35);
+        color: #FFB340;
+      }
+    }
+
+    .action-divider {
+      width: 1px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.12);
+      margin: 0 0.15rem;
     }
 
     .user-pill {
@@ -349,6 +436,32 @@ import { AuthService } from '../../../core/services/auth.service';
       .open-3 { transform: translateY(-7px) rotate(-45deg); }
     }
 
+    .mobile-admin-divider {
+      width: 100%;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 0.5rem 0;
+    }
+
+    .mobile-admin-btn {
+      background: transparent;
+      border: none;
+      color: #CBD5E1;
+      padding: 0.75rem 1rem;
+      font-size: 0.92rem;
+      font-weight: 500;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      border-radius: 8px;
+      &:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: #FFFFFF;
+      }
+    }
+
     .menu-backdrop {
       position: fixed;
       top: 0;
@@ -360,10 +473,64 @@ import { AuthService } from '../../../core/services/auth.service';
       z-index: 501;
     }
 
-    /* Breakpoint para telas menores / laptops (<= 1180px) */
-    @media (max-width: 1180px) {
+    /* Modais Grandes de Administração */
+    .modal-admin-backdrop {
+      z-index: 1000;
+    }
+    .modal-admin-large {
+      max-width: 1100px;
+      width: 95%;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      background: #161D26;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 0;
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      background: #0E1620;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .modal-badge-icon {
+      font-size: 1.5rem;
+    }
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 0.15rem;
+    }
+    .modal-subtitle {
+      font-size: 0.8rem;
+      color: #94A3B8;
+    }
+    .modal-scroll-area {
+      padding: 1.5rem;
+      overflow-y: auto;
+      max-height: calc(88vh - 80px);
+    }
+
+    /* Breakpoints */
+    @media (max-width: 1100px) {
       .mobile-toggle {
         display: flex;
+      }
+      .admin-quick-actions {
+        display: none;
+      }
+      .action-divider {
+        display: none;
       }
       .navbar-nav {
         display: none;
@@ -389,12 +556,6 @@ import { AuthService } from '../../../core/services/auth.service';
           font-size: 0.92rem;
           border-radius: 8px;
         }
-
-        .nav-divider {
-          width: 100%;
-          height: 1px;
-          margin: 0.4rem 0;
-        }
       }
     }
 
@@ -415,12 +576,31 @@ export class NavbarComponent {
   authService = inject(AuthService);
   mobileMenuOpen = signal(false);
 
+  showConfigModal = signal(false);
+  showUsersModal = signal(false);
+
   toggleMenu() {
     this.mobileMenuOpen.update(v => !v);
   }
 
   closeMenu() {
     this.mobileMenuOpen.set(false);
+  }
+
+  openConfigModal() {
+    this.showConfigModal.set(true);
+  }
+
+  closeConfigModal() {
+    this.showConfigModal.set(false);
+  }
+
+  openUsersModal() {
+    this.showUsersModal.set(true);
+  }
+
+  closeUsersModal() {
+    this.showUsersModal.set(false);
   }
 
   logout() {

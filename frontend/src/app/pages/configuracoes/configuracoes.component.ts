@@ -1,24 +1,25 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro } from '../../core/models/models';
-import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
 
 @Component({
   selector: 'app-configuracoes',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="page-container">
-      <!-- Cabeçalho -->
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">Configurações do Sistema</h1>
-          <p class="page-subtitle">Parâmetros globais de câmbio USD/BRL, cotação do dia, categorias, status e eventos</p>
+    <div [class.page-container]="!isModal" [class.modal-view-container]="isModal">
+      <!-- Cabeçalho (apenas quando não em modal) -->
+      @if (!isModal) {
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Configurações do Sistema</h1>
+            <p class="page-subtitle">Parâmetros globais de câmbio USD/BRL, simulador de taxas, eventos, categorias e status</p>
+          </div>
         </div>
-      </div>
+      }
 
       <div class="config-grid">
         <!-- 1. Painel de Câmbio USD -> BRL & Cotação em Tempo Real -->
@@ -26,7 +27,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
           <div class="card-header">
             <div>
               <h3>Cotação do Dólar & Política Cambial (USD → BRL)</h3>
-              <p class="card-subtitle">Monitore o câmbio de mercado e defina a taxa operacional com desconto de taxas bancárias/spread</p>
+              <p class="card-subtitle">Monitore o mercado oficial e simule taxas de conversão com spread e IOF</p>
             </div>
             <span class="badge badge-amber">Câmbio Multi-Moeda</span>
           </div>
@@ -37,7 +38,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
               <div class="box-top">
                 <span class="box-tag">🌐 Mercado Oficial Hoje</span>
                 <button type="button" class="btn btn-sm btn-outline btn-refresh" (click)="loadCotacaoMercado()" [disabled]="isLoadingCotacao()">
-                  {{ isLoadingCotacao() ? 'Carregando...' : '🔄 Sincronizar' }}
+                  {{ isLoadingCotacao() ? '...' : '🔄 Atualizar' }}
                 </button>
               </div>
 
@@ -62,7 +63,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                 </div>
                 <div class="stat-item">
                   <span class="stat-label">Fonte</span>
-                  <span class="stat-val text-truncate">{{ cotacaoMercado()?.fonte || 'Mercado Financeiro' }}</span>
+                  <span class="stat-val text-truncate">{{ cotacaoMercado()?.fonte || 'AwesomeAPI' }}</span>
                 </div>
               </div>
 
@@ -74,40 +75,52 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
               </div>
             </div>
 
-            <!-- Coluna 2: Simulador de Spread / Desconto de Taxas de Conversão -->
+            <!-- Coluna 2: Simulador de Taxas / Spread e Inserção Livre -->
             <div class="cambio-box spread-box">
               <div class="box-top">
-                <span class="box-tag tag-purple">🧮 Simulador de Taxas / Spread</span>
+                <span class="box-tag tag-purple">🧮 Simulador Livre de Taxas</span>
               </div>
-              <p class="box-desc">
-                Ao converter dólares para reais, bancos e corretoras cobram IOF e taxas de conversão (spread). O dólar líquido creditado tende a ser menor que a cotação oficial.
-              </p>
-
+              
               <div class="spread-presets">
-                <span class="preset-label">Desconto estimado:</span>
-                <button type="button" class="btn-preset" [class.active]="spreadPercentual === 0" (click)="aplicarSpread(0)">0% (Bruto)</button>
-                <button type="button" class="btn-preset" [class.active]="spreadPercentual === 2.0" (click)="aplicarSpread(2.0)">-2.0%</button>
-                <button type="button" class="btn-preset" [class.active]="spreadPercentual === 3.0" (click)="aplicarSpread(3.0)">-3.0% (Padrão)</button>
-                <button type="button" class="btn-preset" [class.active]="spreadPercentual === 3.5" (click)="aplicarSpread(3.5)">-3.5% (IOF+Spread)</button>
+                <span class="preset-label">Descontos padrão:</span>
+                <button type="button" class="btn-preset" [class.active]="modoSimulacao === 'PRESET' && spreadPercentual === 2.0" (click)="aplicarSpread(2.0)">-2.0%</button>
+                <button type="button" class="btn-preset" [class.active]="modoSimulacao === 'PRESET' && spreadPercentual === 3.0" (click)="aplicarSpread(3.0)">-3.0%</button>
+                <button type="button" class="btn-preset" [class.active]="modoSimulacao === 'PRESET' && spreadPercentual === 3.5" (click)="aplicarSpread(3.5)">-3.5%</button>
               </div>
 
-              <div class="simulacao-result" *ngIf="cotacaoMercado()?.cotacaoOficial">
+              <!-- Inserção de Taxa Livre pelo Usuário -->
+              <div class="custom-sim-row">
+                <div class="form-group flex-1">
+                  <label class="form-label">Ou digite uma taxa personalizada:</label>
+                  <div class="input-group-custom">
+                    <span class="prefix">R$</span>
+                    <input type="number" step="0.0001" min="0.0001" class="form-control" 
+                           [(ngModel)]="simulacaoTaxaLivre" (input)="onTaxaLivreInput()" 
+                           placeholder="Ex: 4.4964">
+                  </div>
+                </div>
+              </div>
+
+              <div class="simulacao-result">
                 <div class="result-row">
-                  <span>Cotação Bruta de Mercado:</span>
-                  <strong>R$ {{ cotacaoMercado()?.cotacaoOficial | number:'1.4-4' }}</strong>
+                  <span>Cotação Spot Mercado:</span>
+                  <strong>R$ {{ (cotacaoMercado()?.cotacaoOficial || 5.07) | number:'1.4-4' }}</strong>
                 </div>
                 <div class="result-row text-danger">
-                  <span>Desconto de Taxas ({{ spreadPercentual }}%):</span>
-                  <strong>- R$ {{ ((cotacaoMercado()?.cotacaoOficial || 0) * (spreadPercentual / 100)) | number:'1.4-4' }}</strong>
+                  <span>Desconto de Spread/Taxas:</span>
+                  <strong>- R$ {{ getDescontoSimulado() | number:'1.4-4' }} ({{ getPctSpreadSimulado() | number:'1.1-1' }}%)</strong>
                 </div>
                 <div class="result-row result-total text-mint">
-                  <span>Taxa Líquida Estimada:</span>
-                  <strong>R$ {{ calcularTaxaLiquida() | number:'1.4-4' }}</strong>
+                  <span>Taxa Efetiva Resultante:</span>
+                  <strong>R$ {{ getTaxaSimuladaFinal() | number:'1.4-4' }}</strong>
+                </div>
+                <div class="result-example">
+                  <small>💡 Para cada <strong>US$ 100</strong> gastos, chegam <strong>R$ {{ (100 * getTaxaSimuladaFinal()) | number:'1.2-2' }}</strong> e <strong>R$ {{ (100 * getDescontoSimulado()) | number:'1.2-2' }}</strong> ficam em taxas.</small>
                 </div>
               </div>
 
-              <button type="button" class="btn btn-sm btn-outline btn-apply-sim" (click)="aplicarTaxaSimulada()">
-                Usar Taxa Líquida no Sistema
+              <button type="button" class="btn btn-sm btn-primary btn-apply-sim" (click)="aplicarTaxaSimulada()">
+                Usar Esta Taxa como Padrão do Sistema
               </button>
             </div>
 
@@ -262,92 +275,83 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
         </div>
       </div>
 
-      <!-- Modal Evento -->
-      @if (eventoModalOpen()) {
-        <div class="modal-backdrop" (click)="eventoModalOpen.set(false)">
+      <!-- Modais Internos -->
+      @if (showEventoModal()) {
+        <div class="modal-backdrop" (click)="closeEventoModal()">
           <div class="modal-content" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h2>{{ editingEventoId ? 'Editar Evento' : 'Novo Evento' }}</h2>
-              <button class="modal-close" (click)="eventoModalOpen.set(false)">×</button>
-            </div>
+            <h2>{{ editingEventoId() ? 'Editar Evento' : 'Novo Evento' }}</h2>
             <form (ngSubmit)="saveEvento()">
               <div class="form-group">
                 <label class="form-label">Nome do Evento *</label>
-                <input type="text" class="form-control" [(ngModel)]="eventoFormData.nome" name="nome" required placeholder="Ex: Hackathon Serverless">
+                <input type="text" class="form-control" [(ngModel)]="eventoForm.nome" name="nome" required>
               </div>
-              <div class="form-row">
-                <div class="form-group flex-1">
-                  <label class="form-label">Data Prevista *</label>
-                  <input type="date" class="form-control" [(ngModel)]="eventoFormData.data" name="data" required>
-                </div>
-                <div class="form-group flex-1">
-                  <label class="form-label">Status *</label>
-                  <select class="form-select" [(ngModel)]="eventoFormData.status" name="status" required>
-                    <option value="PLANEJADO">Planejado</option>
-                    <option value="EM_ANDAMENTO">Em Andamento</option>
-                    <option value="CONCLUIDO">Concluído</option>
-                    <option value="CANCELADO">Cancelado</option>
-                  </select>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-outline" (click)="eventoModalOpen.set(false)">Cancelar</button>
-                <button type="submit" class="btn btn-primary" [disabled]="!eventoFormData.nome || !eventoFormData.data">Salvar Evento</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      }
-
-      <!-- Modal Categoria -->
-      @if (categoriaModalOpen()) {
-        <div class="modal-backdrop" (click)="categoriaModalOpen.set(false)">
-          <div class="modal-content" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h2>{{ editingCategoriaId ? 'Editar Categoria' : 'Nova Categoria' }}</h2>
-              <button class="modal-close" (click)="categoriaModalOpen.set(false)">×</button>
-            </div>
-            <form (ngSubmit)="saveCategoria()">
               <div class="form-group">
-                <label class="form-label">Nome da Categoria *</label>
-                <input type="text" class="form-control" [(ngModel)]="categoriaFormData.nome" name="nome" required placeholder="Ex: Coffee Break">
+                <label class="form-label">Data Prevista *</label>
+                <input type="date" class="form-control" [(ngModel)]="eventoForm.data" name="data" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Status *</label>
+                <select class="form-select" [(ngModel)]="eventoForm.status" name="status" required>
+                  <option value="PLANEJADO">Planejado</option>
+                  <option value="EM_ANDAMENTO">Em Andamento</option>
+                  <option value="CONCLUIDO">Concluído</option>
+                  <option value="CANCELADO">Cancelado</option>
+                </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Descrição</label>
-                <textarea class="form-control" [(ngModel)]="categoriaFormData.descricao" name="descricao" rows="2" placeholder="Opcional"></textarea>
+                <textarea class="form-control" [(ngModel)]="eventoForm.descricao" name="descricao" rows="2"></textarea>
               </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-outline" (click)="categoriaModalOpen.set(false)">Cancelar</button>
-                <button type="submit" class="btn btn-primary" [disabled]="!categoriaFormData.nome">Salvar Categoria</button>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-outline" (click)="closeEventoModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Evento</button>
               </div>
             </form>
           </div>
         </div>
       }
 
-      <!-- Modal Status -->
-      @if (statusModalOpen()) {
-        <div class="modal-backdrop" (click)="statusModalOpen.set(false)">
+      @if (showCategoriaModal()) {
+        <div class="modal-backdrop" (click)="closeCategoriaModal()">
           <div class="modal-content" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h2>{{ editingStatusId ? 'Editar Status' : 'Novo Status Financeiro' }}</h2>
-              <button class="modal-close" (click)="statusModalOpen.set(false)">×</button>
-            </div>
+            <h2>{{ editingCategoriaId() ? 'Editar Categoria' : 'Nova Categoria' }}</h2>
+            <form (ngSubmit)="saveCategoria()">
+              <div class="form-group">
+                <label class="form-label">Nome da Categoria *</label>
+                <input type="text" class="form-control" [(ngModel)]="categoriaForm.nome" name="nome" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Descrição</label>
+                <textarea class="form-control" [(ngModel)]="categoriaForm.descricao" name="descricao" rows="2"></textarea>
+              </div>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-outline" (click)="closeCategoriaModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Categoria</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      @if (showStatusModal()) {
+        <div class="modal-backdrop" (click)="closeStatusModal()">
+          <div class="modal-content" (click)="$event.stopPropagation()">
+            <h2>{{ editingStatusId() ? 'Editar Status' : 'Novo Status' }}</h2>
             <form (ngSubmit)="saveStatus()">
               <div class="form-group">
                 <label class="form-label">Nome do Status *</label>
-                <input type="text" class="form-control" [(ngModel)]="statusFormData.nome" name="nome" required placeholder="Ex: Reembolsado">
+                <input type="text" class="form-control" [(ngModel)]="statusForm.nome" name="nome" required>
               </div>
               <div class="form-group">
                 <label class="form-label">Cor da Badge (Hexadecimal) *</label>
-                <div class="input-prefix-group">
-                  <input type="color" class="color-picker-input" [(ngModel)]="statusFormData.corBadge" name="corBadge">
-                  <input type="text" class="form-control" [(ngModel)]="statusFormData.corBadge" name="corBadgeText" placeholder="#00E582">
+                <div class="input-color-group">
+                  <input type="color" class="color-picker" [(ngModel)]="statusForm.corBadge" name="corBadge">
+                  <input type="text" class="form-control" [(ngModel)]="statusForm.corBadge" name="corBadgeText" required>
                 </div>
               </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-outline" (click)="statusModalOpen.set(false)">Cancelar</button>
-                <button type="submit" class="btn btn-primary" [disabled]="!statusFormData.nome">Salvar Status</button>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-outline" (click)="closeStatusModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Status</button>
               </div>
             </form>
           </div>
@@ -359,71 +363,64 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .page-container {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 2rem 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+      padding: 1.5rem;
+    }
+    .modal-view-container {
+      padding: 0.5rem 0;
+      width: 100%;
     }
     .page-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1rem;
+      margin-bottom: 1.5rem;
     }
     .page-title {
       font-size: 1.75rem;
-      color: var(--color-navy);
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 0.25rem;
     }
     .page-subtitle {
-      font-size: 0.9rem;
-      color: var(--color-text-secondary);
-      margin-top: 0.25rem;
+      font-size: 0.88rem;
+      color: #94A3B8;
     }
+
     .config-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: 1.5rem;
     }
-    .config-card {
-      display: flex;
-      flex-direction: column;
-    }
     .full-width {
-      grid-column: 1 / -1;
+      grid-column: span 2;
     }
+
     .card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 1rem;
-      h3 { font-size: 1.15rem; color: var(--color-navy); margin: 0; }
-    }
-    .card-subtitle {
-      font-size: 0.8rem;
-      color: var(--color-text-secondary);
-      margin-top: 0.2rem;
+      h3 { font-size: 1.1rem; color: #FFFFFF; }
+      .card-subtitle { font-size: 0.82rem; color: #94A3B8; }
     }
 
-    /* Câmbio Dashboard Grid */
+    /* Painel de Câmbio */
     .cambio-card {
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+      background: #161D26;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 1.25rem;
     }
     .cambio-dashboard-grid {
       display: grid;
-      grid-template-columns: 1fr 1.2fr 1fr;
-      gap: 1.25rem;
-      margin-top: 0.5rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
     }
     .cambio-box {
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      padding: 1.25rem;
+      background: #0F1722;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 1rem;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      background: #F8FAFC;
     }
     .box-top {
       display: flex;
@@ -433,185 +430,194 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     }
     .box-tag {
       font-size: 0.75rem;
-      font-weight: 800;
+      font-weight: 700;
+      color: #38BDF8;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--color-blue);
-      background: var(--color-blue-subtle);
-      padding: 0.25rem 0.6rem;
-      border-radius: var(--radius-pill);
-      &.tag-purple { color: #6B21A8; background: #F3E8FF; }
-      &.tag-mint { color: #065F46; background: #D1FAE5; }
     }
-    .btn-refresh {
-      font-size: 0.75rem;
-      padding: 0.2rem 0.6rem;
-    }
+    .tag-purple { color: #C084FC; }
+    .tag-mint { color: #34D399; }
+
     .market-rate-display {
       display: flex;
       align-items: baseline;
       gap: 0.5rem;
-      margin: 0.5rem 0 1rem 0;
-      flex-wrap: wrap;
+      margin: 0.5rem 0;
     }
-    .currency-symbol {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--color-text-secondary);
-    }
-    .rate-value {
-      font-size: 1.75rem;
-      font-weight: 800;
-      color: var(--color-navy);
-    }
+    .currency-symbol { font-size: 0.9rem; color: #94A3B8; }
+    .rate-value { font-size: 1.5rem; font-weight: 700; color: #FFFFFF; }
     .var-badge {
       font-size: 0.75rem;
       font-weight: 700;
-      padding: 0.2rem 0.5rem;
-      border-radius: var(--radius-pill);
-      &.var-pos { background: #DCFCE7; color: #15803D; }
-      &.var-neg { background: #FEE2E2; color: #B91C1C; }
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      &.var-pos { background: rgba(52, 211, 153, 0.15); color: #34D399; }
+      &.var-neg { background: rgba(239, 68, 68, 0.15); color: #EF4444; }
     }
+
     .market-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-      padding: 0.75rem;
-      background: #FFFFFF;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--color-border);
-      margin-bottom: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin: 0.75rem 0;
+      font-size: 0.8rem;
     }
     .stat-item {
       display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
-    }
-    .stat-label {
-      font-size: 0.7rem;
-      color: var(--color-text-muted);
-    }
-    .stat-val {
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--color-navy);
+      justify-content: space-between;
+      .stat-label { color: #94A3B8; }
+      .stat-val { color: #E2E8F0; font-weight: 600; }
     }
     .market-footer {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 0.75rem;
       font-size: 0.75rem;
-      color: var(--color-text-muted);
+      color: #94A3B8;
     }
     .btn-copy-rate {
       background: transparent;
-      border: 1px dashed var(--color-blue);
-      color: var(--color-blue);
-      padding: 0.4rem 0.75rem;
-      border-radius: var(--radius-sm);
-      font-size: 0.75rem;
-      font-weight: 700;
+      border: 1px solid rgba(255, 153, 0, 0.35);
+      color: #FF9900;
+      padding: 0.4rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
       cursor: pointer;
-      text-align: center;
-      &:hover { background: var(--color-blue-subtle); }
+      &:hover { background: rgba(255, 153, 0, 0.15); }
     }
 
-    /* Spread Box */
-    .box-desc {
-      font-size: 0.8rem;
-      color: var(--color-text-secondary);
-      line-height: 1.4;
-      margin-bottom: 0.75rem;
-    }
     .spread-presets {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      flex-wrap: wrap;
+      gap: 0.35rem;
       margin-bottom: 0.75rem;
+      flex-wrap: wrap;
     }
-    .preset-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--color-text-secondary);
-    }
+    .preset-label { font-size: 0.72rem; color: #94A3B8; }
     .btn-preset {
-      background: #FFFFFF;
-      border: 1px solid var(--color-border);
-      padding: 0.25rem 0.55rem;
-      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #CBD5E1;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
       font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--color-navy);
       cursor: pointer;
-      &:hover { background: #F1F5F9; }
       &.active {
-        background: #6B21A8;
+        background: rgba(147, 51, 234, 0.25);
+        border-color: #A855F7;
         color: #FFFFFF;
-        border-color: #6B21A8;
+        font-weight: 700;
       }
     }
-    .simulacao-result {
-      background: #FFFFFF;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-sm);
-      padding: 0.75rem;
+
+    .custom-sim-row {
+      margin-bottom: 0.75rem;
+    }
+    .input-group-custom {
       display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      font-size: 0.8rem;
+      align-items: center;
+      background: #161D26;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      overflow: hidden;
+      .prefix {
+        padding: 0 0.5rem;
+        font-size: 0.8rem;
+        color: #94A3B8;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .form-control {
+        border: none;
+        border-radius: 0;
+        &:focus { box-shadow: none; }
+      }
+    }
+
+    .simulacao-result {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.75rem;
+      border-radius: 6px;
       margin-bottom: 0.75rem;
     }
     .result-row {
       display: flex;
       justify-content: space-between;
-      color: var(--color-text-secondary);
+      font-size: 0.8rem;
+      margin-bottom: 0.25rem;
+      color: #94A3B8;
+      strong { color: #FFFFFF; }
     }
     .result-total {
-      border-top: 1px solid var(--color-border-light);
-      padding-top: 0.4rem;
-      font-size: 0.85rem;
-      font-weight: 700;
+      font-size: 0.9rem;
+      border-top: 1px dashed rgba(255, 255, 255, 0.1);
+      padding-top: 0.35rem;
+      margin-top: 0.35rem;
+      strong { color: #34D399; }
     }
-    .btn-apply-sim {
-      width: 100%;
-      text-align: center;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: #6B21A8;
-      border-color: #6B21A8;
-      &:hover { background: #F3E8FF; }
+    .result-example {
+      margin-top: 0.5rem;
+      padding-top: 0.4rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.72rem;
+      color: #CBD5E1;
     }
 
-    /* Active Box */
-    .input-taxa {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--color-navy);
+    .btn-apply-sim {
+      width: 100%;
+      padding: 0.5rem;
+      font-weight: 600;
+    }
+
+    .cambio-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .input-prefix-group {
+      display: flex;
+      align-items: center;
+      background: #161D26;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      overflow: hidden;
+      .prefix {
+        padding: 0 0.75rem;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #FF9900;
+        background: rgba(255, 153, 0, 0.1);
+      }
+      .input-taxa {
+        border: none;
+        border-radius: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #FFFFFF;
+      }
+    }
+    .form-helper {
+      font-size: 0.72rem;
+      color: #64748B;
+      margin-top: 0.25rem;
     }
     .cambio-meta {
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
       font-size: 0.75rem;
-      color: var(--color-text-muted);
-      margin: 0.75rem 0;
+      color: #94A3B8;
     }
     .btn-save-cambio {
+      padding: 0.65rem;
+      font-weight: 700;
       width: 100%;
     }
 
-    .input-prefix-group {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      .prefix {
-        font-weight: 700;
-        color: var(--color-navy);
-      }
-    }
     .color-preview-box {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       gap: 0.5rem;
     }
@@ -619,116 +625,77 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      display: inline-block;
-      border: 1px solid var(--color-border);
-    }
-    .color-picker-input {
-      width: 40px;
-      height: 38px;
-      padding: 0;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-    }
-    .form-row {
-      display: flex;
-      gap: 1rem;
-    }
-    .flex-1 { flex: 1; }
-    .form-helper {
-      font-size: 0.75rem;
-      color: var(--color-text-muted);
-      margin-top: 0.25rem;
-      display: block;
-    }
-    .modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1.5rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 1px solid var(--color-border);
-    }
-    .modal-close {
-      background: transparent;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: var(--color-text-secondary);
-      &:hover { color: var(--color-navy); }
-    }
-    .modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      margin-top: 1.75rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--color-border-light);
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    @media (max-width: 1024px) {
-      .cambio-dashboard-grid {
-        grid-template-columns: 1fr;
-      }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
     }
-    @media (max-width: 768px) {
-      .config-grid {
-        grid-template-columns: 1fr;
-      }
-      .market-stats {
-        grid-template-columns: 1fr;
-      }
+
+    @media (max-width: 992px) {
+      .config-grid { grid-template-columns: 1fr; }
+      .full-width { grid-column: span 1; }
+      .cambio-dashboard-grid { grid-template-columns: 1fr; }
     }
   `]
 })
 export class ConfiguracoesComponent implements OnInit {
-  apiService = inject(ApiService);
-  toast = inject(ToastService);
+  @Input() isModal = false;
+  @Output() onClose = new EventEmitter<void>();
+
+  private api = inject(ApiService);
+  private toast = inject(ToastService);
 
   config = signal<ConfiguracaoGlobal | null>(null);
   cotacaoMercado = signal<CotacaoDolar | null>(null);
-  isLoadingCotacao = signal(false);
-
-  taxaInput: number = 5.50;
-  spreadPercentual: number = 3.0;
-
   eventos = signal<Evento[]>([]);
   categorias = signal<Categoria[]>([]);
   statusList = signal<StatusFinanceiro[]>([]);
 
-  // Modais
-  eventoModalOpen = signal(false);
-  editingEventoId: number | null = null;
-  eventoFormData: Partial<Evento> = { nome: '', data: '', status: 'PLANEJADO' };
+  isLoadingCotacao = signal(false);
+  taxaInput: number = 5.5000;
 
-  categoriaModalOpen = signal(false);
-  editingCategoriaId: number | null = null;
-  categoriaFormData: Partial<Categoria> = { nome: '', descricao: '' };
+  modoSimulacao: 'PRESET' | 'CUSTOM' = 'PRESET';
+  spreadPercentual: number = 3.0;
+  simulacaoTaxaLivre: number | null = null;
 
-  statusModalOpen = signal(false);
-  editingStatusId: number | null = null;
-  statusFormData: Partial<StatusFinanceiro> = { nome: '', corBadge: '#00E582' };
+  showEventoModal = signal(false);
+  editingEventoId = signal<number | null>(null);
+  eventoForm: Partial<Evento> = { status: 'PLANEJADO' };
+
+  showCategoriaModal = signal(false);
+  editingCategoriaId = signal<number | null>(null);
+  categoriaForm: Partial<Categoria> = {};
+
+  showStatusModal = signal(false);
+  editingStatusId = signal<number | null>(null);
+  statusForm: Partial<StatusFinanceiro> = { corBadge: '#38BDF8' };
 
   ngOnInit() {
     this.loadAll();
-    this.loadCotacaoMercado();
   }
 
   loadAll() {
-    this.apiService.getConfiguracao().subscribe(cfg => {
-      this.config.set(cfg);
-      this.taxaInput = cfg.taxaCambioUsdBrl;
+    this.api.getConfiguracao().subscribe(c => {
+      this.config.set(c);
+      if (c && c.taxaCambioUsdBrl) {
+        this.taxaInput = c.taxaCambioUsdBrl;
+      }
     });
-    this.apiService.getEventos().subscribe(res => this.eventos.set(res));
-    this.apiService.getCategorias().subscribe(res => this.categorias.set(res));
-    this.apiService.getStatusFinanceiros().subscribe(res => this.statusList.set(res));
+    this.loadCotacaoMercado();
+    this.loadEventos();
+    this.loadCategorias();
+    this.loadStatus();
   }
 
   loadCotacaoMercado() {
     this.isLoadingCotacao.set(true);
-    this.apiService.getCotacaoDolarAtual().subscribe({
-      next: (cotacao) => {
-        this.cotacaoMercado.set(cotacao);
+    this.api.getCotacaoDolarAtual().subscribe({
+      next: (data) => {
+        this.cotacaoMercado.set(data);
         this.isLoadingCotacao.set(false);
       },
       error: () => {
@@ -738,175 +705,221 @@ export class ConfiguracoesComponent implements OnInit {
   }
 
   copiarCotacaoMercado() {
-    const rate = this.cotacaoMercado()?.cotacaoOficial;
-    if (rate) {
-      this.taxaInput = Number(rate.toFixed(4));
-      this.toast.info(`Cotação de mercado R$ ${this.taxaInput} copiada para o campo de taxa.`);
+    if (this.cotacaoMercado()?.cotacaoOficial) {
+      this.taxaInput = this.cotacaoMercado()!.cotacaoOficial;
+      this.toast.info('Cotação oficial de mercado copiada para o campo.');
     }
   }
 
-  aplicarSpread(spread: number) {
-    this.spreadPercentual = spread;
+  aplicarSpread(pct: number) {
+    this.modoSimulacao = 'PRESET';
+    this.spreadPercentual = pct;
+    this.simulacaoTaxaLivre = null;
   }
 
-  calcularTaxaLiquida(): number {
-    const cotacao = this.cotacaoMercado()?.cotacaoOficial || 5.50;
-    const fator = (100 - this.spreadPercentual) / 100;
-    return Number((cotacao * fator).toFixed(4));
+  onTaxaLivreInput() {
+    if (this.simulacaoTaxaLivre && this.simulacaoTaxaLivre > 0) {
+      this.modoSimulacao = 'CUSTOM';
+    }
+  }
+
+  getTaxaSimuladaFinal(): number {
+    if (this.modoSimulacao === 'CUSTOM' && this.simulacaoTaxaLivre && this.simulacaoTaxaLivre > 0) {
+      return this.simulacaoTaxaLivre;
+    }
+    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.0700;
+    return Number((spot * (1 - this.spreadPercentual / 100)).toFixed(4));
+  }
+
+  getDescontoSimulado(): number {
+    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.0700;
+    const finalRate = this.getTaxaSimuladaFinal();
+    return Math.max(0, spot - finalRate);
+  }
+
+  getPctSpreadSimulado(): number {
+    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.0700;
+    if (spot <= 0) return 0;
+    return (this.getDescontoSimulado() / spot) * 100;
   }
 
   aplicarTaxaSimulada() {
-    this.taxaInput = this.calcularTaxaLiquida();
-    this.toast.info(`Taxa líquida estimada de R$ ${this.taxaInput} aplicada ao formulário.`);
+    const taxa = this.getTaxaSimuladaFinal();
+    this.taxaInput = taxa;
+    this.saveTaxaCambio();
   }
 
   saveTaxaCambio() {
-    this.apiService.updateConfiguracao({ taxaCambioUsdBrl: this.taxaInput }).subscribe({
-      next: (updated) => {
-        this.config.set(updated);
-        this.toast.success('Taxa operacional de câmbio atualizada com sucesso!');
+    if (!this.taxaInput || this.taxaInput <= 0) {
+      this.toast.warning('Informe um valor de taxa de câmbio válido.');
+      return;
+    }
+    this.api.updateTaxaCambio(this.taxaInput).subscribe({
+      next: (res) => {
+        this.config.set(res);
+        this.toast.success(`Taxa operacional de câmbio salva: R$ ${this.taxaInput.toFixed(4)}`);
       },
-      error: (err) => this.toast.error(err.error?.message || 'Erro ao atualizar taxa de câmbio.')
+      error: () => this.toast.error('Erro ao salvar taxa de câmbio.')
     });
   }
 
-  // Evento CRUD
+  loadEventos() {
+    this.api.getEventos().subscribe(data => this.eventos.set(data));
+  }
+
   openEventoModal() {
-    this.editingEventoId = null;
-    this.eventoFormData = { nome: '', data: new Date().toISOString().substring(0, 10), status: 'PLANEJADO' };
-    this.eventoModalOpen.set(true);
+    this.editingEventoId.set(null);
+    this.eventoForm = { status: 'PLANEJADO', data: new Date().toISOString().split('T')[0] };
+    this.showEventoModal.set(true);
   }
 
   editEvento(ev: Evento) {
-    this.editingEventoId = ev.id!;
-    this.eventoFormData = { nome: ev.nome, data: ev.data, status: ev.status };
-    this.eventoModalOpen.set(true);
+    this.editingEventoId.set(ev.id || null);
+    this.eventoForm = { ...ev };
+    this.showEventoModal.set(true);
+  }
+
+  closeEventoModal() {
+    this.showEventoModal.set(false);
   }
 
   saveEvento() {
-    if (this.editingEventoId) {
-      this.apiService.updateEvento(this.editingEventoId, this.eventoFormData as Evento).subscribe({
-        next: () => {
-          this.toast.success('Evento atualizado com sucesso!');
-          this.eventoModalOpen.set(false);
-          this.apiService.getEventos().subscribe(res => this.eventos.set(res));
-        },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao atualizar evento.')
-      });
-    } else {
-      this.apiService.createEvento(this.eventoFormData as Evento).subscribe({
-        next: () => {
-          this.toast.success('Evento criado com sucesso!');
-          this.eventoModalOpen.set(false);
-          this.apiService.getEventos().subscribe(res => this.eventos.set(res));
-        },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao criar evento.')
-      });
-    }
+    if (!this.eventoForm.nome || !this.eventoForm.data || !this.eventoForm.status) return;
+    const req = {
+      nome: this.eventoForm.nome,
+      data: this.eventoForm.data,
+      status: this.eventoForm.status,
+      descricao: this.eventoForm.descricao
+    };
+
+    const action = this.editingEventoId()
+      ? this.api.updateEvento(this.editingEventoId()!, req)
+      : this.api.createEvento(req);
+
+    action.subscribe({
+      next: () => {
+        this.toast.success(this.editingEventoId() ? 'Evento atualizado!' : 'Evento criado!');
+        this.loadEventos();
+        this.closeEventoModal();
+      },
+      error: () => this.toast.error('Erro ao salvar evento.')
+    });
   }
 
   deleteEvento(id: number) {
-    if (confirm('Deseja excluir este evento?')) {
-      this.apiService.deleteEvento(id).subscribe({
+    if (confirm('Tem certeza que deseja excluir este evento?')) {
+      this.api.deleteEvento(id).subscribe({
         next: () => {
           this.toast.success('Evento excluído.');
-          this.apiService.getEventos().subscribe(res => this.eventos.set(res));
+          this.loadEventos();
         },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao excluir evento.')
+        error: () => this.toast.error('Erro ao excluir evento.')
       });
     }
   }
 
-  // Categoria CRUD
+  loadCategorias() {
+    this.api.getCategorias().subscribe(data => this.categorias.set(data));
+  }
+
   openCategoriaModal() {
-    this.editingCategoriaId = null;
-    this.categoriaFormData = { nome: '', descricao: '' };
-    this.categoriaModalOpen.set(true);
+    this.editingCategoriaId.set(null);
+    this.categoriaForm = {};
+    this.showCategoriaModal.set(true);
   }
 
   editCategoria(cat: Categoria) {
-    this.editingCategoriaId = cat.id!;
-    this.categoriaFormData = { nome: cat.nome, descricao: cat.descricao };
-    this.categoriaModalOpen.set(true);
+    this.editingCategoriaId.set(cat.id || null);
+    this.categoriaForm = { ...cat };
+    this.showCategoriaModal.set(true);
+  }
+
+  closeCategoriaModal() {
+    this.showCategoriaModal.set(false);
   }
 
   saveCategoria() {
-    if (this.editingCategoriaId) {
-      this.apiService.updateCategoria(this.editingCategoriaId, this.categoriaFormData as Categoria).subscribe({
-        next: () => {
-          this.toast.success('Categoria atualizada!');
-          this.categoriaModalOpen.set(false);
-          this.apiService.getCategorias().subscribe(res => this.categorias.set(res));
-        },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao atualizar categoria.')
-      });
-    } else {
-      this.apiService.createCategoria(this.categoriaFormData as Categoria).subscribe({
-        next: () => {
-          this.toast.success('Categoria criada!');
-          this.categoriaModalOpen.set(false);
-          this.apiService.getCategorias().subscribe(res => this.categorias.set(res));
-        },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao criar categoria.')
-      });
-    }
+    if (!this.categoriaForm.nome) return;
+    const req = {
+      nome: this.categoriaForm.nome,
+      descricao: this.categoriaForm.descricao
+    };
+
+    const action = this.editingCategoriaId()
+      ? this.api.updateCategoria(this.editingCategoriaId()!, req)
+      : this.api.createCategoria(req);
+
+    action.subscribe({
+      next: () => {
+        this.toast.success(this.editingCategoriaId() ? 'Categoria atualizada!' : 'Categoria criada!');
+        this.loadCategorias();
+        this.closeCategoriaModal();
+      },
+      error: () => this.toast.error('Erro ao salvar categoria.')
+    });
   }
 
   deleteCategoria(id: number) {
-    if (confirm('Deseja excluir esta categoria?')) {
-      this.apiService.deleteCategoria(id).subscribe({
+    if (confirm('Tem certeza que deseja excluir esta categoria?')) {
+      this.api.deleteCategoria(id).subscribe({
         next: () => {
           this.toast.success('Categoria excluída.');
-          this.apiService.getCategorias().subscribe(res => this.categorias.set(res));
+          this.loadCategorias();
         },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao excluir categoria.')
+        error: () => this.toast.error('Erro ao excluir categoria.')
       });
     }
   }
 
-  // Status CRUD
+  loadStatus() {
+    this.api.getStatusFinanceiros().subscribe(data => this.statusList.set(data));
+  }
+
   openStatusModal() {
-    this.editingStatusId = null;
-    this.statusFormData = { nome: '', corBadge: '#00E582' };
-    this.statusModalOpen.set(true);
+    this.editingStatusId.set(null);
+    this.statusForm = { corBadge: '#38BDF8' };
+    this.showStatusModal.set(true);
   }
 
   editStatus(st: StatusFinanceiro) {
-    this.editingStatusId = st.id!;
-    this.statusFormData = { nome: st.nome, corBadge: st.corBadge };
-    this.statusModalOpen.set(true);
+    this.editingStatusId.set(st.id || null);
+    this.statusForm = { ...st };
+    this.showStatusModal.set(true);
+  }
+
+  closeStatusModal() {
+    this.showStatusModal.set(false);
   }
 
   saveStatus() {
-    if (this.editingStatusId) {
-      this.apiService.updateStatusFinanceiro(this.editingStatusId, this.statusFormData as StatusFinanceiro).subscribe({
-        next: () => {
-          this.toast.success('Status atualizado!');
-          this.statusModalOpen.set(false);
-          this.apiService.getStatusFinanceiros().subscribe(res => this.statusList.set(res));
-        },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao atualizar status.')
-      });
-    } else {
-      this.apiService.createStatusFinanceiro(this.statusFormData as StatusFinanceiro).subscribe({
-        next: () => {
-          this.toast.success('Status criado!');
-          this.statusModalOpen.set(false);
-          this.apiService.getStatusFinanceiros().subscribe(res => this.statusList.set(res));
-        },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao criar status.')
-      });
-    }
+    if (!this.statusForm.nome || !this.statusForm.corBadge) return;
+    const req = {
+      nome: this.statusForm.nome,
+      corBadge: this.statusForm.corBadge
+    };
+
+    const action = this.editingStatusId()
+      ? this.api.updateStatusFinanceiro(this.editingStatusId()!, req)
+      : this.api.createStatusFinanceiro(req);
+
+    action.subscribe({
+      next: () => {
+        this.toast.success(this.editingStatusId() ? 'Status atualizado!' : 'Status criado!');
+        this.loadStatus();
+        this.closeStatusModal();
+      },
+      error: () => this.toast.error('Erro ao salvar status.')
+    });
   }
 
   deleteStatus(id: number) {
-    if (confirm('Deseja excluir este status financeiro?')) {
-      this.apiService.deleteStatusFinanceiro(id).subscribe({
+    if (confirm('Tem certeza que deseja excluir este status?')) {
+      this.api.deleteStatusFinanceiro(id).subscribe({
         next: () => {
           this.toast.success('Status excluído.');
-          this.apiService.getStatusFinanceiros().subscribe(res => this.statusList.set(res));
+          this.loadStatus();
         },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao excluir status.')
+        error: () => this.toast.error('Erro ao excluir status.')
       });
     }
   }
