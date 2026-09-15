@@ -12,12 +12,13 @@ import { ConfiguracoesComponent } from './pages/configuracoes/configuracoes.comp
 import { UsuariosComponent } from './pages/usuarios/usuarios.component';
 import { PrivacyComponent } from './pages/privacy/privacy.component';
 import { TermsComponent } from './pages/terms/terms.component';
+import { LandingComponent } from './pages/landing/landing.component';
 
 export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'login'
+    component: LandingComponent
   },
   {
     path: 'login',
