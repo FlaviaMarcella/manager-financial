@@ -26,14 +26,21 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final GoogleTokenVerifier googleTokenVerifier;
     private final JwtTokenProvider tokenProvider;
+    private final EmailNotificationService emailNotificationService;
 
-    @Value("${app.initial-admin-email:admin@studentbuilder.aws}")
+    @Value("${app.initial-admin-email:studentbuildergroup@gmail.com}")
     private String initialAdminEmail;
 
-    public AuthService(UsuarioRepository usuarioRepository, GoogleTokenVerifier googleTokenVerifier, JwtTokenProvider tokenProvider) {
+    public AuthService(
+            UsuarioRepository usuarioRepository,
+            GoogleTokenVerifier googleTokenVerifier,
+            JwtTokenProvider tokenProvider,
+            EmailNotificationService emailNotificationService
+    ) {
         this.usuarioRepository = usuarioRepository;
         this.googleTokenVerifier = googleTokenVerifier;
         this.tokenProvider = tokenProvider;
+        this.emailNotificationService = emailNotificationService;
     }
 
     @Transactional
@@ -69,8 +76,20 @@ public class AuthService {
                             .ativo(isAutoApprovedAdmin)
                             .build();
 
-                    logger.info("Novo registro de usuário: {} | Papel: {} | Status: {}", novo.getEmail(), novo.getPapel(), novo.getStatus());
-                    return usuarioRepository.save(novo);
+                    Usuario salvo = usuarioRepository.save(novo);
+                    logger.info("Novo registro de usuário: {} | Papel: {} | Status: {}", salvo.getEmail(), salvo.getPapel(), salvo.getStatus());
+
+                    // Disparo assíncrono de e-mails para solicitações pendentes
+                    if (salvo.getStatus() == StatusUsuario.PENDENTE) {
+                        try {
+                            emailNotificationService.notificarAdminNovaSolicitacao(salvo.getNome(), salvo.getEmail());
+                            emailNotificationService.notificarUsuarioSolicitacaoRecebida(salvo.getNome(), salvo.getEmail());
+                        } catch (Exception e) {
+                            logger.warn("Erro ao agendar envio de e-mails de notificação: {}", e.getMessage());
+                        }
+                    }
+
+                    return salvo;
                 });
 
         // Verificação do status de aprovação

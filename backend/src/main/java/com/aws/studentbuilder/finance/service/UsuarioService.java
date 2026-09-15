@@ -15,9 +15,11 @@ import java.util.List;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final EmailNotificationService emailNotificationService;
 
-    public UsuarioService(UsuarioRepository usuarioRepository) {
+    public UsuarioService(UsuarioRepository usuarioRepository, EmailNotificationService emailNotificationService) {
         this.usuarioRepository = usuarioRepository;
+        this.emailNotificationService = emailNotificationService;
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +71,15 @@ public class UsuarioService {
             usuario.setPapel(papel);
         }
 
-        return toDTO(usuarioRepository.save(usuario));
+        Usuario salvo = usuarioRepository.save(usuario);
+
+        try {
+            emailNotificationService.notificarUsuarioAprovacao(salvo.getNome(), salvo.getEmail(), salvo.getPapel());
+        } catch (Exception e) {
+            // Log e segue sem interromper a transação
+        }
+
+        return toDTO(salvo);
     }
 
     @Transactional
@@ -80,7 +90,15 @@ public class UsuarioService {
         usuario.setStatus(StatusUsuario.REJEITADO);
         usuario.setAtivo(false);
 
-        return toDTO(usuarioRepository.save(usuario));
+        Usuario salvo = usuarioRepository.save(usuario);
+
+        try {
+            emailNotificationService.notificarUsuarioRejeicao(salvo.getNome(), salvo.getEmail());
+        } catch (Exception e) {
+            // Log e segue sem interromper a transação
+        }
+
+        return toDTO(salvo);
     }
 
     public UsuarioDTO toDTO(Usuario usuario) {
