@@ -2,13 +2,13 @@ package com.aws.studentbuilder.finance.service;
 
 import com.aws.studentbuilder.finance.dto.ItemOrcamentoDTO;
 import com.aws.studentbuilder.finance.dto.ItemOrcamentoRequest;
+import com.aws.studentbuilder.finance.dto.TransferenciaOrcamentoDTO;
+import com.aws.studentbuilder.finance.dto.TransferenciaOrcamentoRequest;
 import com.aws.studentbuilder.finance.entity.Categoria;
 import com.aws.studentbuilder.finance.entity.Evento;
 import com.aws.studentbuilder.finance.entity.ItemOrcamento;
-import com.aws.studentbuilder.finance.repository.CategoriaRepository;
-import com.aws.studentbuilder.finance.repository.EventoRepository;
-import com.aws.studentbuilder.finance.repository.ItemOrcamentoRepository;
-import com.aws.studentbuilder.finance.repository.LancamentoRepository;
+import com.aws.studentbuilder.finance.entity.TransferenciaOrcamento;
+import com.aws.studentbuilder.finance.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,18 +37,24 @@ class OrcamentoServiceTest {
     @Mock
     private LancamentoRepository lancamentoRepository;
     @Mock
+    private TransferenciaOrcamentoRepository transferenciaRepository;
+    @Mock
+    private UsuarioRepository usuarioRepository;
+    @Mock
     private ConfigService configService;
 
     @InjectMocks
     private OrcamentoService orcamentoService;
 
     private Evento evento;
+    private Evento eventoDestino;
     private Categoria categoria;
     private ItemOrcamento itemOrcamento;
 
     @BeforeEach
     void setUp() {
         evento = Evento.builder().id(1L).nome("AWS Community Day").data(LocalDate.now()).build();
+        eventoDestino = Evento.builder().id(2L).nome("Hackathon Serverless").data(LocalDate.now().plusMonths(1)).build();
         categoria = Categoria.builder().id(1L).nome("Coffee Break").build();
         itemOrcamento = ItemOrcamento.builder()
                 .id(1L)
@@ -95,5 +101,48 @@ class OrcamentoServiceTest {
         assertEquals(new BigDecimal("550.00"), dto.getValorOrcadoBrl());
         assertEquals(new BigDecimal("600.00"), dto.getValorRealizadoBrl());
         assertEquals(new BigDecimal("-50.00"), dto.getSaldoBrl());
+    }
+
+    @Test
+    @DisplayName("Deve realizar transferência de saldo com sucesso entre eventos")
+    void deveTransferirSaldoComSucesso() {
+        TransferenciaOrcamentoRequest req = TransferenciaOrcamentoRequest.builder()
+                .eventoOrigemId(1L)
+                .categoriaOrigemId(1L)
+                .eventoDestinoId(2L)
+                .categoriaDestinoId(1L)
+                .valorUsd(new BigDecimal("40.00"))
+                .motivo("Sobra de alimentação")
+                .build();
+
+        when(eventoRepository.findById(1L)).thenReturn(Optional.of(evento));
+        when(categoriaRepository.findById(1L)).thenReturn(Optional.of(categoria));
+        when(eventoRepository.findById(2L)).thenReturn(Optional.of(eventoDestino));
+        when(itemOrcamentoRepository.findByEventoIdAndCategoriaId(1L, 1L)).thenReturn(Optional.of(itemOrcamento));
+        when(lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("30.00"));
+        when(configService.getTaxaCambioAtual()).thenReturn(new BigDecimal("5.5000"));
+        when(itemOrcamentoRepository.findByEventoIdAndCategoriaId(2L, 1L)).thenReturn(Optional.empty());
+
+        TransferenciaOrcamento transfSalva = TransferenciaOrcamento.builder()
+                .id(10L)
+                .eventoOrigem(evento)
+                .categoriaOrigem(categoria)
+                .eventoDestino(eventoDestino)
+                .categoriaDestino(categoria)
+                .valorUsd(new BigDecimal("40.00"))
+                .taxaCambio(new BigDecimal("5.5000"))
+                .valorBrl(new BigDecimal("220.00"))
+                .motivo("Sobra de alimentação")
+                .build();
+
+        when(transferenciaRepository.save(any(TransferenciaOrcamento.class))).thenReturn(transfSalva);
+
+        TransferenciaOrcamentoDTO resultado = orcamentoService.transferirSaldo(req);
+
+        assertNotNull(resultado);
+        assertEquals(10L, resultado.getId());
+        assertEquals(new BigDecimal("40.00"), resultado.getValorUsd());
+        assertEquals(new BigDecimal("220.00"), resultado.getValorBrl());
+        assertEquals("Sobra de alimentação", resultado.getMotivo());
     }
 }

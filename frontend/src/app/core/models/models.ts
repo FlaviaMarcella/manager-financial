@@ -156,3 +156,32 @@ export interface RelatorioEvento {
   parcerias: Parceria[];
   brindesUtilizados: Brinde[];
 }
+
+export interface TransferenciaOrcamento {
+  id?: number;
+  eventoOrigemId: number;
+  eventoOrigemNome?: string;
+  categoriaOrigemId: number;
+  categoriaOrigemNome?: string;
+  eventoDestinoId: number;
+  eventoDestinoNome?: string;
+  categoriaDestinoId: number;
+  categoriaDestinoNome?: string;
+  valorUsd: number;
+  taxaCambio?: number;
+  valorBrl?: number;
+  motivo?: string;
+  usuarioNome?: string;
+  usuarioEmail?: string;
+  criadoEm?: string;
+}
+
+export interface CategoriaSaldoDisponivel {
+  categoriaId: number;
+  categoriaNome: string;
+  valorOrcadoUsd: number;
+  valorGastoUsd: number;
+  saldoDisponivelUsd: number;
+  saldoDisponivelBrl: number;
+}
+

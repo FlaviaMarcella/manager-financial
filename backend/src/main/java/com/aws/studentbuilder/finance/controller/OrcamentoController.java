@@ -1,7 +1,10 @@
 package com.aws.studentbuilder.finance.controller;
 
+import com.aws.studentbuilder.finance.dto.CategoriaSaldoDisponivelDTO;
 import com.aws.studentbuilder.finance.dto.ItemOrcamentoDTO;
 import com.aws.studentbuilder.finance.dto.ItemOrcamentoRequest;
+import com.aws.studentbuilder.finance.dto.TransferenciaOrcamentoDTO;
+import com.aws.studentbuilder.finance.dto.TransferenciaOrcamentoRequest;
 import com.aws.studentbuilder.finance.service.OrcamentoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,7 +18,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/orcamento")
-@Tag(name = "Orçamento", description = "Gestão de linhas orçamentárias por evento e categoria")
+@Tag(name = "Orçamento", description = "Gestão de linhas orçamentárias por evento, categoria e transferências")
 public class OrcamentoController {
 
     private final OrcamentoService orcamentoService;
@@ -58,5 +61,26 @@ public class OrcamentoController {
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         orcamentoService.deletar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/transferencias")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Transferir saldo remanescente entre eventos e categorias (apenas ADMIN)")
+    public ResponseEntity<TransferenciaOrcamentoDTO> transferirSaldo(@Valid @RequestBody TransferenciaOrcamentoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(orcamentoService.transferirSaldo(request));
+    }
+
+    @GetMapping("/transferencias")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VIEWER')")
+    @Operation(summary = "Listar histórico de transferências de saldo")
+    public ResponseEntity<List<TransferenciaOrcamentoDTO>> listarTransferencias(@RequestParam(required = false) Long eventoId) {
+        return ResponseEntity.ok(orcamentoService.listarTransferencias(eventoId));
+    }
+
+    @GetMapping("/eventos/{eventoId}/saldos-disponiveis")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VIEWER')")
+    @Operation(summary = "Obter saldos disponíveis por categoria para um evento de origem")
+    public ResponseEntity<List<CategoriaSaldoDisponivelDTO>> obterSaldosDisponiveis(@PathVariable Long eventoId) {
+        return ResponseEntity.ok(orcamentoService.obterSaldosDisponiveis(eventoId));
     }
 }

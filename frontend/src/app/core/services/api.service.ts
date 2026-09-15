@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   Brinde,
   Categoria,
+  CategoriaSaldoDisponivel,
   ConfiguracaoGlobal,
   DashboardSummary,
   Evento,
@@ -12,6 +13,7 @@ import {
   Parceria,
   RelatorioEvento,
   StatusFinanceiro,
+  TransferenciaOrcamento,
   Usuario
 } from '../models/models';
 
@@ -107,6 +109,22 @@ export class ApiService {
 
   deleteItemOrcamento(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/orcamento/${id}`);
+  }
+
+  transferirOrcamento(data: Partial<TransferenciaOrcamento>): Observable<TransferenciaOrcamento> {
+    return this.http.post<TransferenciaOrcamento>(`${this.baseUrl}/orcamento/transferencias`, data);
+  }
+
+  getTransferencias(eventoId?: number): Observable<TransferenciaOrcamento[]> {
+    let params = new HttpParams();
+    if (eventoId) {
+      params = params.set('eventoId', eventoId.toString());
+    }
+    return this.http.get<TransferenciaOrcamento[]>(`${this.baseUrl}/orcamento/transferencias`, { params });
+  }
+
+  getSaldosDisponiveis(eventoId: number): Observable<CategoriaSaldoDisponivel[]> {
+    return this.http.get<CategoriaSaldoDisponivel[]>(`${this.baseUrl}/orcamento/eventos/${eventoId}/saldos-disponiveis`);
   }
 
   // Lançamentos

@@ -30,6 +30,9 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, Long>, J
     @Query("SELECT SUM(l.valorBrl) FROM Lancamento l WHERE l.evento.id = :eventoId AND l.categoria.id = :categoriaId")
     BigDecimal sumGastoBrlByEventoIdAndCategoriaId(@Param("eventoId") Long eventoId, @Param("categoriaId") Long categoriaId);
 
+    @Query("SELECT SUM(l.valorUsd) FROM Lancamento l WHERE l.evento.id = :eventoId AND l.categoria.id = :categoriaId")
+    BigDecimal sumGastoUsdByEventoIdAndCategoriaId(@Param("eventoId") Long eventoId, @Param("categoriaId") Long categoriaId);
+
     @Query("SELECT l.categoria.nome, SUM(l.valorBrl) FROM Lancamento l GROUP BY l.categoria.nome")
     List<Object[]> sumGastoBrlGroupedByCategoria();
 
