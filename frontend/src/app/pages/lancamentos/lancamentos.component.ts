@@ -223,13 +223,16 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
               <div class="form-row">
                 <div class="form-group flex-1">
                   <label class="form-label">Valor em BRL (R$) *</label>
-                  <input type="number" step="0.01" min="0" class="form-control" [(ngModel)]="formData.valorBrl" (ngModelChange)="onBrlChange()" name="valorBrl" required placeholder="0.00">
+                  <input type="number" step="0.01" min="0" class="form-control" [(ngModel)]="formData.valorBrl" (ngModelChange)="onBrlChange()" name="valorBrl" placeholder="0.00">
                 </div>
 
                 <div class="form-group flex-1">
                   <label class="form-label">Valor em USD (US$)</label>
-                  <input type="number" step="0.01" min="0" class="form-control" [(ngModel)]="formData.valorUsd" name="valorUsd" placeholder="0.00">
+                  <input type="number" step="0.01" min="0" class="form-control" [(ngModel)]="formData.valorUsd" (ngModelChange)="onUsdChange()" name="valorUsd" placeholder="0.00">
                 </div>
+              </div>
+              <div class="conversion-hint" *ngIf="taxaCambio() > 0">
+                <small>💱 Câmbio atual: <strong>1 USD = R$ {{ taxaCambio() | number:'1.2-4' }}</strong> (conversão automática nos dois sentidos)</small>
               </div>
 
               <div class="form-row">
@@ -263,7 +266,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
 
               <div class="modal-footer">
                 <button type="button" class="btn btn-outline" (click)="closeModal()">Cancelar</button>
-                <button type="submit" class="btn btn-primary" [disabled]="!formData.data || !formData.descricao || !formData.fornecedor || !formData.eventoId || !formData.categoriaId || formData.valorBrl === undefined">
+                <button type="submit" class="btn btn-primary" [disabled]="!formData.data || !formData.descricao || !formData.fornecedor || !formData.eventoId || !formData.categoriaId || (!formData.valorBrl && !formData.valorUsd)">
                   {{ isEditing() ? 'Atualizar Lançamento' : 'Salvar Lançamento' }}
                 </button>
               </div>
@@ -439,6 +442,16 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .file-upload-area {
       margin-top: 1rem;
     }
+    .conversion-hint {
+      margin-top: -0.25rem;
+      margin-bottom: 1rem;
+      font-size: 0.825rem;
+      color: #b45309;
+      background: #fffbeb;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid #fef3c7;
+    }
   `]
 })
 export class LancamentosComponent implements OnInit {
@@ -530,8 +543,22 @@ export class LancamentosComponent implements OnInit {
   }
 
   onBrlChange() {
-    if (this.formData.valorBrl && this.taxaCambio() > 0) {
+    if (this.formData.valorBrl !== undefined && this.formData.valorBrl !== null && this.taxaCambio() > 0) {
       this.formData.valorUsd = Number((this.formData.valorBrl / this.taxaCambio()).toFixed(2));
+    } else if (this.formData.valorBrl === null || this.formData.valorBrl === undefined || this.formData.valorBrl === 0) {
+      if (!this.formData.valorUsd) {
+        this.formData.valorUsd = 0;
+      }
+    }
+  }
+
+  onUsdChange() {
+    if (this.formData.valorUsd !== undefined && this.formData.valorUsd !== null && this.taxaCambio() > 0) {
+      this.formData.valorBrl = Number((this.formData.valorUsd * this.taxaCambio()).toFixed(2));
+    } else if (this.formData.valorUsd === null || this.formData.valorUsd === undefined || this.formData.valorUsd === 0) {
+      if (!this.formData.valorBrl) {
+        this.formData.valorBrl = 0;
+      }
     }
   }
 

@@ -125,11 +125,17 @@ public class LancamentoService {
         BigDecimal valorBrl = request.getValorBrl();
         BigDecimal valorUsd = request.getValorUsd();
 
-        if (valorUsd == null || valorUsd.compareTo(BigDecimal.ZERO) == 0) {
-            if (valorBrl != null && taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
+        if ((valorUsd == null || valorUsd.compareTo(BigDecimal.ZERO) == 0) && (valorBrl != null && valorBrl.compareTo(BigDecimal.ZERO) > 0)) {
+            if (taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
                 valorUsd = valorBrl.divide(taxaCambio, 2, RoundingMode.HALF_UP);
             } else {
                 valorUsd = BigDecimal.ZERO;
+            }
+        } else if ((valorBrl == null || valorBrl.compareTo(BigDecimal.ZERO) == 0) && (valorUsd != null && valorUsd.compareTo(BigDecimal.ZERO) > 0)) {
+            if (taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
+                valorBrl = valorUsd.multiply(taxaCambio).setScale(2, RoundingMode.HALF_UP);
+            } else {
+                valorBrl = BigDecimal.ZERO;
             }
         }
 
@@ -141,7 +147,7 @@ public class LancamentoService {
                 .evento(evento)
                 .categoria(categoria)
                 .valorBrl(valorBrl != null ? valorBrl : BigDecimal.ZERO)
-                .valorUsd(valorUsd)
+                .valorUsd(valorUsd != null ? valorUsd : BigDecimal.ZERO)
                 .formaPagamento(request.getFormaPagamento())
                 .status(status)
                 .responsavel(responsavel)
@@ -171,9 +177,17 @@ public class LancamentoService {
         BigDecimal valorBrl = request.getValorBrl();
         BigDecimal valorUsd = request.getValorUsd();
 
-        if (valorUsd == null || valorUsd.compareTo(BigDecimal.ZERO) == 0) {
-            if (valorBrl != null && taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
+        if ((valorUsd == null || valorUsd.compareTo(BigDecimal.ZERO) == 0) && (valorBrl != null && valorBrl.compareTo(BigDecimal.ZERO) > 0)) {
+            if (taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
                 valorUsd = valorBrl.divide(taxaCambio, 2, RoundingMode.HALF_UP);
+            } else {
+                valorUsd = BigDecimal.ZERO;
+            }
+        } else if ((valorBrl == null || valorBrl.compareTo(BigDecimal.ZERO) == 0) && (valorUsd != null && valorUsd.compareTo(BigDecimal.ZERO) > 0)) {
+            if (taxaCambio.compareTo(BigDecimal.ZERO) > 0) {
+                valorBrl = valorUsd.multiply(taxaCambio).setScale(2, RoundingMode.HALF_UP);
+            } else {
+                valorBrl = BigDecimal.ZERO;
             }
         }
 
