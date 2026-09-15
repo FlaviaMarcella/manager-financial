@@ -60,8 +60,11 @@ export interface ItemOrcamento {
   valorOrcadoUsd: number;
   taxaCambioUsada?: number;
   valorOrcadoBrl?: number;
+  valorRealizadoUsd?: number;
+  saldoUsd?: number;
   valorRealizadoBrl?: number;
   saldoBrl?: number;
+  taxaRetidaTotal?: number;
   observacoes?: string;
   criadoEm?: string;
 }

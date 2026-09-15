@@ -12,8 +12,11 @@ public class ItemOrcamentoDTO {
     private BigDecimal valorOrcadoUsd;
     private BigDecimal taxaCambioUsada;
     private BigDecimal valorOrcadoBrl;
+    private BigDecimal valorRealizadoUsd;
+    private BigDecimal saldoUsd;
     private BigDecimal valorRealizadoBrl;
     private BigDecimal saldoBrl;
+    private BigDecimal taxaRetidaTotal;
     private String observacoes;
     private OffsetDateTime criadoEm;
 
@@ -21,7 +24,9 @@ public class ItemOrcamentoDTO {
 
     public ItemOrcamentoDTO(Long id, Long eventoId, String eventoNome, Long categoriaId, String categoriaNome,
                             BigDecimal valorOrcadoUsd, BigDecimal taxaCambioUsada, BigDecimal valorOrcadoBrl,
-                            BigDecimal valorRealizadoBrl, BigDecimal saldoBrl, String observacoes, OffsetDateTime criadoEm) {
+                            BigDecimal valorRealizadoUsd, BigDecimal saldoUsd,
+                            BigDecimal valorRealizadoBrl, BigDecimal saldoBrl, BigDecimal taxaRetidaTotal,
+                            String observacoes, OffsetDateTime criadoEm) {
         this.id = id;
         this.eventoId = eventoId;
         this.eventoNome = eventoNome;
@@ -30,8 +35,11 @@ public class ItemOrcamentoDTO {
         this.valorOrcadoUsd = valorOrcadoUsd;
         this.taxaCambioUsada = taxaCambioUsada;
         this.valorOrcadoBrl = valorOrcadoBrl;
+        this.valorRealizadoUsd = valorRealizadoUsd;
+        this.saldoUsd = saldoUsd;
         this.valorRealizadoBrl = valorRealizadoBrl;
         this.saldoBrl = saldoBrl;
+        this.taxaRetidaTotal = taxaRetidaTotal;
         this.observacoes = observacoes;
         this.criadoEm = criadoEm;
     }
@@ -47,8 +55,11 @@ public class ItemOrcamentoDTO {
         private BigDecimal valorOrcadoUsd;
         private BigDecimal taxaCambioUsada;
         private BigDecimal valorOrcadoBrl;
+        private BigDecimal valorRealizadoUsd;
+        private BigDecimal saldoUsd;
         private BigDecimal valorRealizadoBrl;
         private BigDecimal saldoBrl;
+        private BigDecimal taxaRetidaTotal;
         private String observacoes;
         private OffsetDateTime criadoEm;
 
@@ -60,12 +71,15 @@ public class ItemOrcamentoDTO {
         public Builder valorOrcadoUsd(BigDecimal valorOrcadoUsd) { this.valorOrcadoUsd = valorOrcadoUsd; return this; }
         public Builder taxaCambioUsada(BigDecimal taxaCambioUsada) { this.taxaCambioUsada = taxaCambioUsada; return this; }
         public Builder valorOrcadoBrl(BigDecimal valorOrcadoBrl) { this.valorOrcadoBrl = valorOrcadoBrl; return this; }
+        public Builder valorRealizadoUsd(BigDecimal valorRealizadoUsd) { this.valorRealizadoUsd = valorRealizadoUsd; return this; }
+        public Builder saldoUsd(BigDecimal saldoUsd) { this.saldoUsd = saldoUsd; return this; }
         public Builder valorRealizadoBrl(BigDecimal valorRealizadoBrl) { this.valorRealizadoBrl = valorRealizadoBrl; return this; }
         public Builder saldoBrl(BigDecimal saldoBrl) { this.saldoBrl = saldoBrl; return this; }
+        public Builder taxaRetidaTotal(BigDecimal taxaRetidaTotal) { this.taxaRetidaTotal = taxaRetidaTotal; return this; }
         public Builder observacoes(String observacoes) { this.observacoes = observacoes; return this; }
         public Builder criadoEm(OffsetDateTime criadoEm) { this.criadoEm = criadoEm; return this; }
         public ItemOrcamentoDTO build() {
-            return new ItemOrcamentoDTO(id, eventoId, eventoNome, categoriaId, categoriaNome, valorOrcadoUsd, taxaCambioUsada, valorOrcadoBrl, valorRealizadoBrl, saldoBrl, observacoes, criadoEm);
+            return new ItemOrcamentoDTO(id, eventoId, eventoNome, categoriaId, categoriaNome, valorOrcadoUsd, taxaCambioUsada, valorOrcadoBrl, valorRealizadoUsd, saldoUsd, valorRealizadoBrl, saldoBrl, taxaRetidaTotal, observacoes, criadoEm);
         }
     }
 
@@ -85,10 +99,16 @@ public class ItemOrcamentoDTO {
     public void setTaxaCambioUsada(BigDecimal taxaCambioUsada) { this.taxaCambioUsada = taxaCambioUsada; }
     public BigDecimal getValorOrcadoBrl() { return valorOrcadoBrl; }
     public void setValorOrcadoBrl(BigDecimal valorOrcadoBrl) { this.valorOrcadoBrl = valorOrcadoBrl; }
+    public BigDecimal getValorRealizadoUsd() { return valorRealizadoUsd; }
+    public void setValorRealizadoUsd(BigDecimal valorRealizadoUsd) { this.valorRealizadoUsd = valorRealizadoUsd; }
+    public BigDecimal getSaldoUsd() { return saldoUsd; }
+    public void setSaldoUsd(BigDecimal saldoUsd) { this.saldoUsd = saldoUsd; }
     public BigDecimal getValorRealizadoBrl() { return valorRealizadoBrl; }
     public void setValorRealizadoBrl(BigDecimal valorRealizadoBrl) { this.valorRealizadoBrl = valorRealizadoBrl; }
     public BigDecimal getSaldoBrl() { return saldoBrl; }
     public void setSaldoBrl(BigDecimal saldoBrl) { this.saldoBrl = saldoBrl; }
+    public BigDecimal getTaxaRetidaTotal() { return taxaRetidaTotal; }
+    public void setTaxaRetidaTotal(BigDecimal taxaRetidaTotal) { this.taxaRetidaTotal = taxaRetidaTotal; }
     public String getObservacoes() { return observacoes; }
     public void setObservacoes(String observacoes) { this.observacoes = observacoes; }
     public OffsetDateTime getCriadoEm() { return criadoEm; }

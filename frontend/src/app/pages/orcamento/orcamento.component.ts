@@ -36,7 +36,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
         }
       </div>
 
-      <!-- Filtro por Evento -->
+      <!-- Filtro por Evento & Painel Resumo -->
       <div class="card filter-card">
         <div class="filter-row">
           <div class="filter-item">
@@ -51,21 +51,23 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
 
           <div class="summary-pills">
             <div class="pill">
-              <span>Total Orçado (USD):</span>
-              <strong>US$ {{ totalUsd() | number:'1.2-2' }}</strong>
-            </div>
-            <div class="pill pill-amber">
-              <span>Total Orçado (BRL):</span>
-              <strong>{{ totalBrl() | currencyBrl }}</strong>
+              <span>Orçamento Aprovado:</span>
+              <strong>US$ {{ totalUsd() | number:'1.2-2' }} <small class="text-muted">({{ totalBrl() | currencyBrl }})</small></strong>
             </div>
             <div class="pill pill-purple">
-              <span>Total Realizado:</span>
-              <strong>{{ totalRealizado() | currencyBrl }}</strong>
+              <span>Gasto Consumido:</span>
+              <strong>US$ {{ totalRealizadoUsd() | number:'1.2-2' }} <small class="text-muted">({{ totalRealizadoBrl() | currencyBrl }})</small></strong>
             </div>
-            <div class="pill" [class.pill-mint]="totalSaldo() >= 0" [class.pill-danger]="totalSaldo() < 0">
-              <span>Saldo Global:</span>
-              <strong>{{ totalSaldo() | currencyBrl }}</strong>
+            <div class="pill" [class.pill-mint]="totalSaldoUsd() >= 0" [class.pill-danger]="totalSaldoUsd() < 0">
+              <span>Saldo Restante:</span>
+              <strong>US$ {{ totalSaldoUsd() | number:'1.2-2' }} <small>({{ totalSaldoBrl() | currencyBrl }})</small></strong>
             </div>
+            @if (totalTaxasRetidas() > 0) {
+              <div class="pill pill-amber" title="Diferença entre o valor orçado em dólar debitado e o valor recebido pelo fornecedor em reais (spread de câmbio bancário e IOF)">
+                <span>Taxas / Spread Retido:</span>
+                <strong>{{ totalTaxasRetidas() | currencyBrl }}</strong>
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -78,10 +80,13 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
               <th>Evento</th>
               <th>Categoria</th>
               <th>Orçado (USD)</th>
-              <th>Taxa Câmbio</th>
+              <th>Gasto (USD)</th>
+              <th>Saldo (USD)</th>
+              <th>Câmbio Base</th>
               <th>Orçado (BRL)</th>
-              <th>Realizado (BRL)</th>
+              <th>Pago (BRL)</th>
               <th>Saldo (BRL)</th>
+              <th>Taxa/Spread Retido</th>
               <th>Status</th>
               <th style="text-align: right;">Ações</th>
             </tr>
@@ -93,19 +98,36 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                 <td>
                   <span class="badge badge-navy">{{ item.categoriaNome }}</span>
                 </td>
-                <td>US$ {{ item.valorOrcadoUsd | number:'1.2-2' }}</td>
-                <td>R$ {{ item.taxaCambioUsada | number:'1.4-4' }}</td>
-                <td><strong>{{ item.valorOrcadoBrl | currencyBrl }}</strong></td>
+                <td><strong>US$ {{ item.valorOrcadoUsd | number:'1.2-2' }}</strong></td>
+                <td class="text-usd-gasto">US$ {{ (item.valorRealizadoUsd || 0) | number:'1.2-2' }}</td>
+                <td>
+                  <span class="saldo-usd" [class.text-danger]="(item.saldoUsd || 0) < 0" [class.text-mint]="(item.saldoUsd || 0) > 0" [class.text-muted]="(item.saldoUsd || 0) === 0">
+                    US$ {{ (item.saldoUsd || 0) | number:'1.2-2' }}
+                  </span>
+                </td>
+                <td><small>R$ {{ item.taxaCambioUsada | number:'1.4-4' }}</small></td>
+                <td>{{ item.valorOrcadoBrl | currencyBrl }}</td>
                 <td class="text-realizado">{{ item.valorRealizadoBrl | currencyBrl }}</td>
                 <td>
-                  <span class="saldo-badge" [class.saldo-positivo]="(item.saldoBrl || 0) >= 0" [class.saldo-negativo]="(item.saldoBrl || 0) < 0">
+                  <span class="saldo-badge" [class.saldo-positivo]="(item.saldoBrl || 0) > 0" [class.saldo-zerado]="(item.saldoBrl || 0) === 0" [class.saldo-negativo]="(item.saldoBrl || 0) < 0">
                     {{ item.saldoBrl | currencyBrl }}
                   </span>
                 </td>
                 <td>
-                  @if ((item.saldoBrl || 0) < 0) {
+                  @if ((item.taxaRetidaTotal || 0) > 0) {
+                    <span class="taxa-retida-tag" title="Perda de conversão em spread cambial e taxas">
+                      -{{ item.taxaRetidaTotal | currencyBrl }}
+                    </span>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+                <td>
+                  @if ((item.saldoUsd || 0) < 0 || (item.saldoBrl || 0) < 0) {
                     <span class="badge badge-danger">Estourado</span>
-                  } @else if ((item.valorRealizadoBrl || 0) > 0) {
+                  } @else if ((item.saldoUsd || 0) === 0 && (item.valorRealizadoUsd || 0) > 0) {
+                    <span class="badge badge-navy">100% Executado</span>
+                  } @else if ((item.valorRealizadoUsd || 0) > 0) {
                     <span class="badge badge-mint">Em Execução</span>
                   } @else {
                     <span class="badge badge-blue">Planejado</span>
@@ -129,7 +151,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
               </tr>
             } @empty {
               <tr>
-                <td colspan="9" class="empty-state">
+                <td colspan="12" class="empty-state">
                   Nenhum item de orçamento encontrado para os filtros selecionados.
                 </td>
               </tr>
@@ -247,22 +269,24 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                 <h4 class="section-title">Valores & Execução Orçamentária</h4>
                 <div class="financial-cards-row">
                   <div class="fin-card fin-usd">
-                    <span class="fin-label">Valor Orçado em Dólar</span>
+                    <span class="fin-label">Orçamento em Dólar</span>
                     <h3 class="fin-value">US$ {{ selectedItemForDetails.valorOrcadoUsd | number:'1.2-2' }}</h3>
-                    <small>Câmbio Usado: R$ {{ selectedItemForDetails.taxaCambioUsada | number:'1.4-4' }}</small>
+                    <small>Gasto: US$ {{ (selectedItemForDetails.valorRealizadoUsd || 0) | number:'1.2-2' }} | Saldo: <strong>US$ {{ (selectedItemForDetails.saldoUsd || 0) | number:'1.2-2' }}</strong></small>
                   </div>
 
                   <div class="fin-card fin-brl">
-                    <span class="fin-label">Valor Orçado em Reais</span>
+                    <span class="fin-label">Orçamento em Reais (Teto)</span>
                     <h3 class="fin-value">{{ selectedItemForDetails.valorOrcadoBrl | currencyBrl }}</h3>
-                    <small>Teto disponível para gastos</small>
+                    <small>Pago a Fornecedores: {{ selectedItemForDetails.valorRealizadoBrl | currencyBrl }}</small>
                   </div>
                 </div>
 
                 <div class="execution-progress-box">
                   <div class="exec-header">
-                    <span>Gasto Realizado: <strong>{{ selectedItemForDetails.valorRealizadoBrl | currencyBrl }}</strong></span>
-                    <span>Saldo Livre: <strong [class.text-danger]="(selectedItemForDetails.saldoBrl || 0) < 0" [class.text-mint]="(selectedItemForDetails.saldoBrl || 0) >= 0">{{ selectedItemForDetails.saldoBrl | currencyBrl }}</strong></span>
+                    <span>Saldo Restante em BRL: <strong [class.text-danger]="(selectedItemForDetails.saldoBrl || 0) < 0" [class.text-mint]="(selectedItemForDetails.saldoBrl || 0) > 0">{{ selectedItemForDetails.saldoBrl | currencyBrl }}</strong></span>
+                    @if ((selectedItemForDetails.taxaRetidaTotal || 0) > 0) {
+                      <span class="text-amber">Custo/Spread de Câmbio Retido: <strong>{{ selectedItemForDetails.taxaRetidaTotal | currencyBrl }}</strong></span>
+                    }
                   </div>
                 </div>
 
@@ -581,6 +605,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .page-title {
       font-size: 1.75rem;
       color: var(--color-navy);
+      font-weight: 700;
     }
     .page-subtitle {
       font-size: 0.9rem;
@@ -628,16 +653,37 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       &.pill-mint { border-color: var(--color-mint); strong { color: #00874C; } }
       &.pill-danger { border-color: var(--color-danger); strong { color: var(--color-danger); } }
     }
-    .text-realizado {
+    .text-usd-gasto {
       color: var(--color-purple);
       font-weight: 600;
+    }
+    .text-realizado {
+      color: var(--color-navy);
+      font-weight: 600;
+    }
+    .text-amber {
+      color: #B45309;
+    }
+    .saldo-usd {
+      font-weight: 700;
     }
     .saldo-badge {
       font-weight: 700;
       padding: 0.25rem 0.6rem;
       border-radius: var(--radius-pill);
       &.saldo-positivo { background: var(--color-mint-subtle); color: #00874C; }
+      &.saldo-zerado { background: #F1F5F9; color: #64748B; }
       &.saldo-negativo { background: var(--color-danger-subtle); color: var(--color-danger); }
+    }
+    .taxa-retida-tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #B45309;
+      background: #FEF3C7;
+      padding: 0.2rem 0.5rem;
+      border-radius: var(--radius-pill);
+      border: 1px solid #FDE68A;
+      display: inline-block;
     }
     .btn-view {
       color: var(--color-navy);
@@ -754,11 +800,6 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       color: var(--color-text-secondary);
       &:hover { color: var(--color-navy); }
     }
-    .form-helper {
-      font-size: 0.8rem;
-      color: var(--color-text-secondary);
-      margin-top: 0.35rem;
-    }
     .label-with-action {
       display: flex;
       align-items: center;
@@ -871,8 +912,11 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .exec-header {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-size: 0.85rem;
       color: var(--color-text-secondary);
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
     .market-comparison-bar {
       background: #FFFBEB;
@@ -913,7 +957,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .trans-flow-col {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.2rem;
     }
     .flow-event {
       font-size: 1.1rem;
@@ -1138,12 +1182,24 @@ export class OrcamentoComponent implements OnInit {
     return this.itens().reduce((acc, curr) => acc + (Number(curr.valorOrcadoBrl) || 0), 0);
   }
 
-  totalRealizado(): number {
+  totalRealizadoUsd(): number {
+    return this.itens().reduce((acc, curr) => acc + (Number(curr.valorRealizadoUsd) || 0), 0);
+  }
+
+  totalRealizadoBrl(): number {
     return this.itens().reduce((acc, curr) => acc + (Number(curr.valorRealizadoBrl) || 0), 0);
   }
 
-  totalSaldo(): number {
-    return this.totalBrl() - this.totalRealizado();
+  totalSaldoUsd(): number {
+    return this.itens().reduce((acc, curr) => acc + (Number(curr.saldoUsd) || 0), 0);
+  }
+
+  totalSaldoBrl(): number {
+    return this.itens().reduce((acc, curr) => acc + (Number(curr.saldoBrl) || 0), 0);
+  }
+
+  totalTaxasRetidas(): number {
+    return this.itens().reduce((acc, curr) => acc + (Number(curr.taxaRetidaTotal) || 0), 0);
   }
 
   // Modais de Detalhes

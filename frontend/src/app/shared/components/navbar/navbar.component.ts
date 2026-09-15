@@ -25,7 +25,7 @@ import { AuthService } from '../../../core/services/auth.service';
           </a>
         </div>
 
-        <!-- 2. Menu de Navegação Centralizado (Centro) - Apenas os 6 Módulos Principais -->
+        <!-- 2. Menu de Navegação Centralizado (Centro) - Apenas os 6 Módulos Principais no Desktop -->
         <nav class="navbar-nav" [class.mobile-open]="mobileMenuOpen()">
           <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">
             <span class="nav-icon">📊</span>
@@ -52,14 +52,14 @@ import { AuthService } from '../../../core/services/auth.service';
             <span>Brindes</span>
           </a>
 
-          <!-- Opções Admin no menu mobile -->
+          <!-- Opções Admin APENAS no menu mobile (ocultas no desktop) -->
           @if (authService.isAdmin()) {
             <div class="mobile-admin-divider"></div>
-            <a routerLink="/configuracoes" routerLinkActive="active" (click)="closeMenu()">
+            <a routerLink="/configuracoes" routerLinkActive="active" (click)="closeMenu()" class="mobile-only-link">
               <span class="nav-icon">⚙️</span>
               <span>Configurações</span>
             </a>
-            <a routerLink="/usuarios" routerLinkActive="active" (click)="closeMenu()">
+            <a routerLink="/usuarios" routerLinkActive="active" (click)="closeMenu()" class="mobile-only-link">
               <span class="nav-icon">👥</span>
               <span>Gestão de Usuários</span>
             </a>
@@ -70,11 +70,11 @@ import { AuthService } from '../../../core/services/auth.service';
         <div class="navbar-actions">
           @if (authService.isAdmin()) {
             <div class="admin-quick-links">
-              <a routerLink="/configuracoes" routerLinkActive="active-admin" class="btn-admin-pill" title="Configurações do Sistema & Câmbio">
+              <a routerLink="/configuracoes" routerLinkActive="active-admin" class="btn-admin-pill" title="Configurações & Câmbio">
                 <span class="admin-icon">⚙️</span>
                 <span>Config</span>
               </a>
-              <a routerLink="/usuarios" routerLinkActive="active-admin" class="btn-admin-pill" title="Gestão de Usuários & Permissões">
+              <a routerLink="/usuarios" routerLinkActive="active-admin" class="btn-admin-pill" title="Gestão de Usuários">
                 <span class="admin-icon">👥</span>
                 <span>Usuários</span>
               </a>
@@ -114,7 +114,7 @@ import { AuthService } from '../../../core/services/auth.service';
   styles: [`
     .navbar {
       background: linear-gradient(180deg, #121924 0%, #0F1722 100%);
-      color: var(--color-white);
+      color: #FFFFFF;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       position: sticky;
       top: 0;
@@ -240,6 +240,14 @@ import { AuthService } from '../../../core/services/auth.service';
           }
         }
       }
+    }
+
+    /* Ocultar links admin específicos no desktop */
+    .mobile-only-link {
+      display: none !important;
+    }
+    .mobile-admin-divider {
+      display: none !important;
     }
 
     /* 3. Ações Admin e Perfil */
@@ -389,20 +397,13 @@ import { AuthService } from '../../../core/services/auth.service';
         display: block;
         width: 22px;
         height: 2px;
-        background-color: var(--color-white);
+        background-color: #FFFFFF;
         border-radius: 2px;
         transition: all 0.2s ease;
       }
       .open-1 { transform: translateY(7px) rotate(45deg); }
       .open-2 { opacity: 0; }
       .open-3 { transform: translateY(-7px) rotate(-45deg); }
-    }
-
-    .mobile-admin-divider {
-      width: 100%;
-      height: 1px;
-      background: rgba(255, 255, 255, 0.1);
-      margin: 0.5rem 0;
     }
 
     .menu-backdrop {
@@ -450,6 +451,17 @@ import { AuthService } from '../../../core/services/auth.service';
           padding: 0.75rem 1rem;
           font-size: 0.92rem;
           border-radius: 8px;
+        }
+
+        .mobile-only-link {
+          display: flex !important;
+        }
+        .mobile-admin-divider {
+          display: block !important;
+          width: 100%;
+          height: 1px;
+          background: rgba(255, 255, 255, 0.1);
+          margin: 0.5rem 0;
         }
       }
     }

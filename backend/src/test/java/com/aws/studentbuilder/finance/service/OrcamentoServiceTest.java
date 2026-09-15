@@ -80,6 +80,7 @@ class OrcamentoServiceTest {
         when(configService.getTaxaCambioAtual()).thenReturn(new BigDecimal("5.5000"));
         when(itemOrcamentoRepository.save(any(ItemOrcamento.class))).thenReturn(itemOrcamento);
         when(lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("200.00"));
+        when(lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("36.36"));
 
         ItemOrcamentoDTO resultado = orcamentoService.criar(request);
 
@@ -87,20 +88,34 @@ class OrcamentoServiceTest {
         assertEquals(new BigDecimal("100.00"), resultado.getValorOrcadoUsd());
         assertEquals(new BigDecimal("550.00"), resultado.getValorOrcadoBrl());
         assertEquals(new BigDecimal("200.00"), resultado.getValorRealizadoBrl());
-        assertEquals(new BigDecimal("350.00"), resultado.getSaldoBrl());
+        assertEquals(new BigDecimal("63.64"), resultado.getSaldoUsd());
+        assertEquals(new BigDecimal("350.02"), resultado.getSaldoBrl());
     }
 
     @Test
-    @DisplayName("Deve calcular saldo negativo se realizado exceder orçado")
-    void deveCalcularSaldoNegativoQuandoExceder() {
-        when(lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("600.00"));
+    @DisplayName("Deve calcular saldo zerado quando todo o orçamento em USD for utilizado")
+    void deveCalcularSaldoZeradoQuandoUsdEsgotado() {
+        // Exemplo Demo Day: Orçado 168.11 USD, Gastos totalizaram 168.11 USD e 771.96 BRL
+        ItemOrcamento demoDayItem = ItemOrcamento.builder()
+                .id(2L)
+                .evento(evento)
+                .categoria(categoria)
+                .valorOrcadoUsd(new BigDecimal("168.11"))
+                .taxaCambioUsada(new BigDecimal("5.1355"))
+                .build();
 
-        ItemOrcamentoDTO dto = orcamentoService.toDTO(itemOrcamento);
+        when(lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("168.11"));
+        when(lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("771.96"));
+
+        ItemOrcamentoDTO dto = orcamentoService.toDTO(demoDayItem);
 
         assertNotNull(dto);
-        assertEquals(new BigDecimal("550.00"), dto.getValorOrcadoBrl());
-        assertEquals(new BigDecimal("600.00"), dto.getValorRealizadoBrl());
-        assertEquals(new BigDecimal("-50.00"), dto.getSaldoBrl());
+        assertEquals(new BigDecimal("168.11"), dto.getValorRealizadoUsd());
+        assertEquals(new BigDecimal("0.00"), dto.getSaldoUsd());
+        assertEquals(new BigDecimal("0.00"), dto.getSaldoBrl());
+        assertEquals(new BigDecimal("771.96"), dto.getValorRealizadoBrl());
+        // Taxa retida = 863.33 - 771.96 = 91.37
+        assertEquals(new BigDecimal("91.37"), dto.getTaxaRetidaTotal());
     }
 
     @Test

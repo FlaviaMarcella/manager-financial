@@ -158,7 +158,6 @@ public class OrcamentoService {
                 request.getEventoOrigemId(), request.getCategoriaOrigemId()
         ).orElseThrow(() -> new IllegalArgumentException("Não há orçamento cadastrado para a categoria de origem no evento selecionado."));
 
-        // Cálculo do saldo disponível em USD na origem
         BigDecimal taxaOrigem = itemOrigem.getTaxaCambioUsada() != null ? itemOrigem.getTaxaCambioUsada() : configService.getTaxaCambioAtual();
         BigDecimal gastoUsd = lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(request.getEventoOrigemId(), request.getCategoriaOrigemId());
         if (gastoUsd == null) {
@@ -290,7 +289,12 @@ public class OrcamentoService {
 
     public ItemOrcamentoDTO toDTO(ItemOrcamento item) {
         BigDecimal taxa = item.getTaxaCambioUsada() != null ? item.getTaxaCambioUsada() : BigDecimal.ONE;
-        BigDecimal valorOrcadoBrl = item.getValorOrcadoUsd().multiply(taxa).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal valorOrcadoUsd = item.getValorOrcadoUsd() != null ? item.getValorOrcadoUsd() : BigDecimal.ZERO;
+        BigDecimal valorOrcadoBrl = valorOrcadoUsd.multiply(taxa).setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal valorRealizadoUsd = lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(
+                item.getEvento().getId(), item.getCategoria().getId()
+        );
 
         BigDecimal valorRealizadoBrl = lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(
                 item.getEvento().getId(), item.getCategoria().getId()
@@ -300,7 +304,24 @@ public class OrcamentoService {
         }
         valorRealizadoBrl = valorRealizadoBrl.setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal saldoBrl = valorOrcadoBrl.subtract(valorRealizadoBrl).setScale(2, RoundingMode.HALF_UP);
+        if (valorRealizadoUsd == null) {
+            if (valorRealizadoBrl.compareTo(BigDecimal.ZERO) > 0 && taxa.compareTo(BigDecimal.ZERO) > 0) {
+                valorRealizadoUsd = valorRealizadoBrl.divide(taxa, 2, RoundingMode.HALF_UP);
+            } else {
+                valorRealizadoUsd = BigDecimal.ZERO;
+            }
+        }
+        valorRealizadoUsd = valorRealizadoUsd.setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal saldoUsd = valorOrcadoUsd.subtract(valorRealizadoUsd).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal saldoBrl = saldoUsd.multiply(taxa).setScale(2, RoundingMode.HALF_UP);
+
+        // Taxa retida / Spread total consumido = (valorRealizadoUsd * taxa) - valorRealizadoBrl
+        BigDecimal orcadoConsumidoBrl = valorRealizadoUsd.multiply(taxa).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal taxaRetidaTotal = orcadoConsumidoBrl.subtract(valorRealizadoBrl);
+        if (taxaRetidaTotal.compareTo(BigDecimal.ZERO) < 0) {
+            taxaRetidaTotal = BigDecimal.ZERO;
+        }
 
         return ItemOrcamentoDTO.builder()
                 .id(item.getId())
@@ -308,11 +329,14 @@ public class OrcamentoService {
                 .eventoNome(item.getEvento().getNome())
                 .categoriaId(item.getCategoria().getId())
                 .categoriaNome(item.getCategoria().getNome())
-                .valorOrcadoUsd(item.getValorOrcadoUsd())
+                .valorOrcadoUsd(valorOrcadoUsd)
                 .taxaCambioUsada(item.getTaxaCambioUsada())
                 .valorOrcadoBrl(valorOrcadoBrl)
+                .valorRealizadoUsd(valorRealizadoUsd)
+                .saldoUsd(saldoUsd)
                 .valorRealizadoBrl(valorRealizadoBrl)
                 .saldoBrl(saldoBrl)
+                .taxaRetidaTotal(taxaRetidaTotal)
                 .observacoes(item.getObservacoes())
                 .criadoEm(item.getCriadoEm())
                 .build();
