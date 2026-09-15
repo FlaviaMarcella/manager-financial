@@ -392,11 +392,6 @@ export class UsuariosComponent implements OnInit {
     this.apiService.getUsuarios().subscribe({
       next: (res) => {
         this.usuarios.set(res);
-        // Se não houver pendentes, troca para a aba de ativos automaticamente
-        const pendingCount = res.filter(u => u.status === 'PENDENTE').length;
-        if (pendingCount === 0 && this.activeTab() === 'PENDENTES') {
-          this.activeTab.set('ATIVOS');
-        }
       },
       error: () => this.toast.error('Erro ao carregar lista de usuários.')
     });

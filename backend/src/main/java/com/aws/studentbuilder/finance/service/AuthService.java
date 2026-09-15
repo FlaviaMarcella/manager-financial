@@ -43,7 +43,7 @@ public class AuthService {
         this.emailNotificationService = emailNotificationService;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {UserPendingApprovalException.class, UserAccessDeniedException.class})
     public AuthResponse loginWithGoogle(AuthRequest request) {
         GoogleTokenVerifier.GoogleUserInfo googleUser = googleTokenVerifier.verify(request.getToken());
 
@@ -66,7 +66,7 @@ public class AuthService {
                         existing.setStatus(StatusUsuario.APROVADO);
                         existing.setAtivo(true);
                     }
-                    return usuarioRepository.save(existing);
+                    return usuarioRepository.saveAndFlush(existing);
                 })
                 .orElseGet(() -> {
                     boolean isFirstUser = usuarioRepository.count() == 0;
@@ -82,8 +82,8 @@ public class AuthService {
                             .ativo(isAutoApprovedAdmin)
                             .build();
 
-                    Usuario salvo = usuarioRepository.save(novo);
-                    logger.info("Novo registro de usuário: {} | Papel: {} | Status: {}", salvo.getEmail(), salvo.getPapel(), salvo.getStatus());
+                    Usuario salvo = usuarioRepository.saveAndFlush(novo);
+                    logger.info("Novo registro de usuário persistido: {} | Papel: {} | Status: {}", salvo.getEmail(), salvo.getPapel(), salvo.getStatus());
 
                     // Disparo assíncrono de e-mails para solicitações pendentes
                     if (salvo.getStatus() == StatusUsuario.PENDENTE) {
