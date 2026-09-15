@@ -10,66 +10,78 @@ import { AuthService } from '../../../core/services/auth.service';
   template: `
     <header class="navbar">
       <div class="navbar-container">
-        <!-- Logo e Título -->
+        <!-- 1. Brand / Logo (Esquerda) -->
         <div class="navbar-brand">
           <a routerLink="/dashboard" class="brand-link" (click)="closeMenu()">
-            <img src="/assets/brandmarks/AWS Student Builder Group_RGB_Brandmark_White.png" 
-                 alt="AWS Student Builder Group" 
-                 class="brand-logo"
-                 (error)="handleLogoError($event)">
+            <div class="brand-icon-wrapper" title="AWS Student Builder Group">
+              <svg class="brand-svg-icon" viewBox="0 0 3000 3000" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2333.33 3000H2000V2666.67H1666.67V3000H1333.33V2666.67H1000V3000H666.667V2333.33H2333.33V3000ZM666.667 2333.33H0V2000H333.333V1666.67H0V1333.33H333.333V1000H0V666.667H666.667V2333.33ZM3000 1000H2666.67V1333.33H3000V1666.67H2666.67V2000H3000V2333.33H2333.33V666.667H3000V1000ZM1000 333.333H1333.33V0H1666.67V333.333H2000V0H2333.33V666.667H666.667V0H1000V333.333Z" fill="#FF9900"/>
+              </svg>
+            </div>
             <div class="brand-text">
-              <span class="brand-title">AWS SBG Finance</span>
-              <span class="brand-subtitle">Gestão Financeira</span>
+              <span class="brand-title"><span class="aws-tag">AWS</span> SBG</span>
+              <span class="brand-subtitle">Finance</span>
             </div>
           </a>
         </div>
 
-        <!-- Menu Desktop & Mobile -->
+        <!-- 2. Menu de Navegação Centralizado (Centro) -->
         <nav class="navbar-nav" [class.mobile-open]="mobileMenuOpen()">
           <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">
-            <span class="nav-icon">📊</span> Dashboard
+            <span class="nav-icon">📊</span>
+            <span>Dashboard</span>
           </a>
           <a routerLink="/orcamento" routerLinkActive="active" (click)="closeMenu()">
-            <span class="nav-icon">💰</span> Orçamento
+            <span class="nav-icon">💰</span>
+            <span>Orçamento</span>
           </a>
           <a routerLink="/lancamentos" routerLinkActive="active" (click)="closeMenu()">
-            <span class="nav-icon">🧾</span> Lançamentos & NFs
+            <span class="nav-icon">🧾</span>
+            <span>Lançamentos</span>
           </a>
           <a routerLink="/relatorios" routerLinkActive="active" (click)="closeMenu()">
-            <span class="nav-icon">📁</span> Relatórios
+            <span class="nav-icon">📁</span>
+            <span>Relatórios</span>
           </a>
           <a routerLink="/parcerias" routerLinkActive="active" (click)="closeMenu()">
-            <span class="nav-icon">🤝</span> Parcerias
+            <span class="nav-icon">🤝</span>
+            <span>Parcerias</span>
           </a>
           <a routerLink="/brindes" routerLinkActive="active" (click)="closeMenu()">
-            <span class="nav-icon">🎁</span> Brindes
+            <span class="nav-icon">🎁</span>
+            <span>Brindes</span>
           </a>
           
           @if (authService.isAdmin()) {
+            <span class="nav-divider"></span>
             <a routerLink="/configuracoes" routerLinkActive="active" (click)="closeMenu()">
-              <span class="nav-icon">⚙️</span> Configurações
+              <span class="nav-icon">⚙️</span>
+              <span>Configurações</span>
             </a>
             <a routerLink="/usuarios" routerLinkActive="active" (click)="closeMenu()">
-              <span class="nav-icon">👥</span> Usuários
+              <span class="nav-icon">👥</span>
+              <span>Usuários</span>
             </a>
           }
         </nav>
 
-        <!-- Ações e Perfil do Usuário -->
+        <!-- 3. Usuário & Logout (Direita) -->
         <div class="navbar-actions">
           @if (authService.currentUser(); as user) {
-            <div class="user-badge-container">
-              <span class="user-name" [title]="user.nome">{{ user.nome }}</span>
-              <span class="badge" [class.badge-amber]="user.papel === 'ADMIN'" [class.badge-blue]="user.papel === 'VIEWER'">
+            <div class="user-pill" [title]="user.nome + ' (' + user.email + ')'">
+              <div class="user-avatar">{{ user.nome.charAt(0).toUpperCase() }}</div>
+              <span class="user-name">{{ user.nome }}</span>
+              <span class="user-role-badge" [class.role-admin]="user.papel === 'ADMIN'" [class.role-viewer]="user.papel === 'VIEWER'">
                 {{ user.papel }}
               </span>
             </div>
-            <button class="btn btn-sm btn-outline btn-logout" (click)="logout()" title="Sair da conta">
-              Sair
+            <button class="btn-logout" (click)="logout()" title="Sair da conta">
+              <span class="logout-text">Sair</span>
+              <span class="logout-icon">🚪</span>
             </button>
           }
 
-          <!-- Botão Mobile Menu -->
+          <!-- Botão Hamburger Mobile -->
           <button class="mobile-toggle" (click)="toggleMenu()" aria-label="Abrir menu de navegação">
             <span class="hamburger-bar" [class.open-1]="mobileMenuOpen()"></span>
             <span class="hamburger-bar" [class.open-2]="mobileMenuOpen()"></span>
@@ -78,7 +90,7 @@ import { AuthService } from '../../../core/services/auth.service';
         </div>
       </div>
       
-      <!-- Backdrop móvel para fechar o menu ao clicar fora -->
+      <!-- Backdrop móvel -->
       @if (mobileMenuOpen()) {
         <div class="menu-backdrop" (click)="closeMenu()"></div>
       }
@@ -86,126 +98,232 @@ import { AuthService } from '../../../core/services/auth.service';
   `,
   styles: [`
     .navbar {
-      background-color: var(--color-navy);
+      background: linear-gradient(180deg, #121924 0%, #0F1722 100%);
       color: var(--color-white);
-      border-bottom: 1px solid var(--color-navy-subtle);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       position: sticky;
       top: 0;
       z-index: 500;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
       width: 100%;
     }
+    
     .navbar-container {
-      max-width: 1400px;
+      max-width: 1440px;
       margin: 0 auto;
-      padding: 0.65rem 1.25rem;
+      padding: 0 1.25rem;
+      height: 64px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
       position: relative;
-      z-index: 502;
     }
+
+    /* 1. Brand */
     .navbar-brand {
       display: flex;
       align-items: center;
       flex-shrink: 0;
     }
+
     .brand-link {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.65rem;
       text-decoration: none;
       color: inherit;
+      padding: 0.25rem 0.4rem;
+      border-radius: 8px;
+      transition: opacity 0.2s ease;
+      &:hover {
+        opacity: 0.9;
+      }
     }
-    .brand-logo {
-      height: 34px;
-      width: auto;
-      object-fit: contain;
+
+    .brand-icon-wrapper {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 153, 0, 0.12);
+      border: 1px solid rgba(255, 153, 0, 0.35);
+      border-radius: 8px;
+      padding: 4px;
+      box-shadow: 0 0 12px rgba(255, 153, 0, 0.15);
     }
+
+    .brand-svg-icon {
+      width: 22px;
+      height: 22px;
+      display: block;
+    }
+
     .brand-text {
       display: flex;
-      flex-direction: column;
+      align-items: baseline;
+      gap: 0.35rem;
     }
+
     .brand-title {
       font-size: 1.05rem;
       font-weight: 700;
-      color: var(--color-white);
-      line-height: 1.1;
-      white-space: nowrap;
+      letter-spacing: -0.01em;
+      color: #FFFFFF;
+      .aws-tag {
+        color: #FF9900;
+      }
     }
+
     .brand-subtitle {
-      font-size: 0.65rem;
-      color: var(--color-amber);
+      font-size: 0.78rem;
       font-weight: 600;
-      letter-spacing: 0.05em;
+      color: #94A3B8;
       text-transform: uppercase;
-      white-space: nowrap;
+      letter-spacing: 0.06em;
     }
+
+    /* 2. Menu Centralizado */
     .navbar-nav {
       display: flex;
       align-items: center;
-      gap: 0.25rem;
-      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.2rem;
+      flex: 1;
+
       a {
-        color: #CBD5E1;
+        color: #94A3B8;
         text-decoration: none;
-        padding: 0.45rem 0.65rem;
-        border-radius: var(--radius-sm);
-        font-size: 0.85rem;
-        font-weight: 600;
-        transition: all var(--transition-fast);
+        padding: 0.45rem 0.7rem;
+        border-radius: 6px;
+        font-size: 0.84rem;
+        font-weight: 500;
+        transition: all 0.15s ease-in-out;
         display: flex;
         align-items: center;
-        gap: 0.35rem;
+        gap: 0.4rem;
         white-space: nowrap;
-        .nav-icon { font-size: 0.85rem; }
-        &:hover {
-          color: var(--color-white);
-          background-color: rgba(255, 255, 255, 0.08);
+
+        .nav-icon {
+          font-size: 0.85rem;
+          opacity: 0.85;
         }
+
+        &:hover {
+          color: #FFFFFF;
+          background-color: rgba(255, 255, 255, 0.06);
+        }
+
         &.active {
-          color: var(--color-white);
-          background-color: var(--color-navy-light);
-          border-bottom: 2px solid var(--color-amber);
+          color: #FFFFFF;
+          background-color: rgba(255, 255, 255, 0.1);
+          font-weight: 600;
+          box-shadow: inset 0 -2px 0 #FF9900;
+          .nav-icon {
+            opacity: 1;
+          }
         }
       }
+
+      .nav-divider {
+        width: 1px;
+        height: 18px;
+        background-color: rgba(255, 255, 255, 0.12);
+        margin: 0 0.35rem;
+      }
     }
+
+    /* 3. Ações e Perfil */
     .navbar-actions {
       display: flex;
       align-items: center;
+      justify-content: flex-end;
       gap: 0.65rem;
       flex-shrink: 0;
     }
-    .user-badge-container {
+
+    .user-pill {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      background: rgba(255, 255, 255, 0.06);
-      padding: 0.3rem 0.65rem;
-      border-radius: var(--radius-pill);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 0.25rem 0.6rem 0.25rem 0.35rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
+
+    .user-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FF9900, #E68A00);
+      color: #0F1722;
+      font-weight: 700;
+      font-size: 0.78rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
     .user-name {
       font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--color-white);
-      max-width: 120px;
+      font-weight: 500;
+      color: #E2E8F0;
+      max-width: 110px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .btn-logout {
-      border-color: rgba(255, 255, 255, 0.2);
-      color: #E2E8F0;
-      padding: 0.35rem 0.65rem;
-      font-size: 0.8rem;
-      &:hover {
-        background-color: rgba(255, 77, 79, 0.2);
-        border-color: var(--color-danger);
-        color: var(--color-danger);
+
+    .user-role-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+
+      &.role-admin {
+        background: rgba(255, 153, 0, 0.18);
+        color: #FFB340;
+        border: 1px solid rgba(255, 153, 0, 0.35);
+      }
+
+      &.role-viewer {
+        background: rgba(56, 189, 248, 0.18);
+        color: #7DD3FC;
+        border: 1px solid rgba(56, 189, 248, 0.35);
       }
     }
+
+    .btn-logout {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #CBD5E1;
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.15s ease;
+
+      .logout-icon {
+        font-size: 0.85rem;
+      }
+
+      &:hover {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: #F87171;
+      }
+    }
+
+    /* Mobile Hamburger */
     .mobile-toggle {
       display: none;
       flex-direction: column;
@@ -217,6 +335,7 @@ import { AuthService } from '../../../core/services/auth.service';
       padding: 0.4rem;
       width: 36px;
       height: 36px;
+
       .hamburger-bar {
         display: block;
         width: 22px;
@@ -229,23 +348,20 @@ import { AuthService } from '../../../core/services/auth.service';
       .open-2 { opacity: 0; }
       .open-3 { transform: translateY(-7px) rotate(-45deg); }
     }
+
     .menu-backdrop {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(2px);
       z-index: 501;
     }
 
-    @media (max-width: 1100px) {
-      .user-name {
-        display: none;
-      }
-    }
-
-    @media (max-width: 960px) {
+    /* Breakpoint para telas menores / laptops (<= 1180px) */
+    @media (max-width: 1180px) {
       .mobile-toggle {
         display: flex;
       }
@@ -255,33 +371,42 @@ import { AuthService } from '../../../core/services/auth.service';
         top: 100%;
         left: 0;
         right: 0;
-        background-color: var(--color-navy-dark);
+        background-color: #0E1620;
         flex-direction: column;
         align-items: stretch;
         padding: 1rem;
-        border-bottom: 2px solid var(--color-amber);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        border-bottom: 2px solid #FF9900;
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
         z-index: 503;
-        gap: 0.5rem;
+        gap: 0.35rem;
+
         &.mobile-open {
           display: flex;
         }
+
         a {
           padding: 0.75rem 1rem;
-          font-size: 0.95rem;
+          font-size: 0.92rem;
+          border-radius: 8px;
+        }
+
+        .nav-divider {
+          width: 100%;
+          height: 1px;
+          margin: 0.4rem 0;
         }
       }
     }
 
-    @media (max-width: 480px) {
+    @media (max-width: 600px) {
       .navbar-container {
-        padding: 0.5rem 0.75rem;
+        padding: 0 0.85rem;
       }
-      .brand-title {
-        font-size: 0.95rem;
+      .user-name {
+        display: none;
       }
-      .brand-logo {
-        height: 28px;
+      .logout-text {
+        display: none;
       }
     }
   `]
@@ -300,10 +425,5 @@ export class NavbarComponent {
 
   logout() {
     this.authService.logout();
-  }
-
-  handleLogoError(event: Event) {
-    const target = event.target as HTMLImageElement;
-    target.src = '/assets/brandmarks/AWS Student Builder Group_RGB_Brandmark_White.png';
   }
 }
