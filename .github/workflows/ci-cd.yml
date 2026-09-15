@@ -88,7 +88,6 @@ jobs:
     steps:
       - name: Deploy on AWS EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
-        if: ${{ secrets.EC2_HOST != '' }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER || 'ubuntu' }}
