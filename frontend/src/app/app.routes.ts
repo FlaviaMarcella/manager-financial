@@ -10,6 +10,8 @@ import { BrindesComponent } from './pages/brindes/brindes.component';
 import { RelatoriosComponent } from './pages/relatorios/relatorios.component';
 import { ConfiguracoesComponent } from './pages/configuracoes/configuracoes.component';
 import { UsuariosComponent } from './pages/usuarios/usuarios.component';
+import { PrivacyComponent } from './pages/privacy/privacy.component';
+import { TermsComponent } from './pages/terms/terms.component';
 
 export const routes: Routes = [
   {
@@ -20,6 +22,22 @@ export const routes: Routes = [
   {
     path: 'login',
     component: LoginComponent
+  },
+  {
+    path: 'privacidade',
+    component: PrivacyComponent
+  },
+  {
+    path: 'privacy',
+    component: PrivacyComponent
+  },
+  {
+    path: 'termos',
+    component: TermsComponent
+  },
+  {
+    path: 'terms',
+    component: TermsComponent
   },
   {
     path: 'dashboard',
