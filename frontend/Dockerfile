@@ -1,4 +1,4 @@
-﻿# Multi-stage Dockerfile for Angular 21 Frontend
+# Multi-stage Dockerfile for Angular 21 Frontend
 
 # Stage 1: Build
 FROM node:20-alpine AS build

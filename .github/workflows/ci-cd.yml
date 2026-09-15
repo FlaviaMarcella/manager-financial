@@ -1,4 +1,4 @@
-﻿name: CI/CD Pipeline - AWS Student Builder Group Finance
+name: CI/CD Pipeline - AWS Student Builder Group Finance
 
 on:
   push:

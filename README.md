@@ -1,4 +1,4 @@
-﻿# 🚀 AWS Student Builder Group - Sistema de Gestão Financeira
+# 🚀 AWS Student Builder Group - Sistema de Gestão Financeira
 
 <p align="center">
   <img src="frontend/public/assets/brandmarks/color-horizontal.svg" alt="AWS Student Builder Group" width="360" />
