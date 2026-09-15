@@ -43,7 +43,7 @@ services:
       AWS_REGION: ${AWS_REGION:-us-east-2}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://aws-sbg-finance.duckdns.org,http://aws-sbg-finance.duckdns.org,http://localhost:4200,http://localhost,*}
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-studentbuildergroup@gmail.com}
       SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp.gmail.com}
       SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}

@@ -60,11 +60,17 @@ public class AuthService {
                     if (existing.getNome() == null || existing.getNome().isBlank()) {
                         existing.setNome(googleUser.name());
                     }
+                    boolean isConfiguredAdmin = initialAdminEmail != null && initialAdminEmail.trim().equalsIgnoreCase(googleUser.email().trim());
+                    if (isConfiguredAdmin) {
+                        existing.setPapel(PapelUsuario.ADMIN);
+                        existing.setStatus(StatusUsuario.APROVADO);
+                        existing.setAtivo(true);
+                    }
                     return usuarioRepository.save(existing);
                 })
                 .orElseGet(() -> {
                     boolean isFirstUser = usuarioRepository.count() == 0;
-                    boolean isConfiguredAdmin = initialAdminEmail != null && initialAdminEmail.equalsIgnoreCase(googleUser.email());
+                    boolean isConfiguredAdmin = initialAdminEmail != null && initialAdminEmail.trim().equalsIgnoreCase(googleUser.email().trim());
                     boolean isAutoApprovedAdmin = isFirstUser || isConfiguredAdmin;
 
                     Usuario novo = Usuario.builder()
