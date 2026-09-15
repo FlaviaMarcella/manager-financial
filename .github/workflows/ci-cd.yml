@@ -30,9 +30,7 @@ jobs:
 
       - name: Run Maven Tests
         working-directory: ./backend
-        run: |
-          chmod +x mvnw
-          ./mvnw clean test
+        run: mvn clean test
 
   # ==========================================
   # 2. Frontend CI (Angular 21)
@@ -90,9 +88,7 @@ jobs:
     steps:
       - name: Deploy on AWS EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
-        if: env.EC2_HOST != ''
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
+        if: ${{ secrets.EC2_HOST != '' }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER || 'ubuntu' }}
