@@ -17,15 +17,29 @@ declare const google: any;
         <!-- Logo do Grupo -->
         <div class="logo-wrapper">
           <img src="/assets/brandmarks/AWS Student Builder Group_RGB_Brandmark_White.png" 
-               alt="AWS Student Builder Group" 
+               alt="AWS SBG Finance" 
                class="login-logo"
                (error)="handleLogoError($event)">
         </div>
 
         <div class="login-header">
           <span class="app-tag">AWS SBG Finance</span>
-          <h1 class="login-title">Gestão Financeira</h1>
-          <p class="login-subtitle">Sistema oficial de controle orçamentário, prestação de contas, parcerias e brindes do <strong>AWS Student Builder Group</strong>.</p>
+          <h1 class="login-title">AWS SBG Finance</h1>
+          <p class="login-subtitle">Sistema de Gestão Orçamentária, Prestação de Contas e Governança Financeira do <strong>AWS Student Builder Group</strong></p>
+        </div>
+
+        <!-- Seção Pública: Finalidade da Aplicação (Requisito Google OAuth) -->
+        <div class="app-purpose-box">
+          <h3 class="purpose-title">ℹ️ Finalidade do Aplicativo</h3>
+          <p class="purpose-text">
+            O <strong>AWS SBG Finance</strong> é a plataforma oficial da comunidade acadêmica dedicada a:
+          </p>
+          <ul class="purpose-list">
+            <li>Planejamento e controle de orçamentos para eventos e workshops.</li>
+            <li>Guarda e auditoria de notas fiscais e comprovantes de despesas.</li>
+            <li>Gestão de parcerias institucionais, patrocínios e inventário de brindes.</li>
+            <li>Emissão de relatórios consolidados de prestação de contas.</li>
+          </ul>
         </div>
 
         <!-- Estado: Solicitação Pendente de Aprovação -->
@@ -65,7 +79,7 @@ declare const google: any;
 
           <div class="security-notice">
             <span class="lock-icon">🔒</span>
-            <span>Acesso seguro e restrito a membros autorizados do AWS Student Builder Group.</span>
+            <span>Acesso autenticado via Google OAuth 2.0 restrito a membros autorizados.</span>
           </div>
         }
 
@@ -134,7 +148,37 @@ declare const google: any;
       font-size: 0.875rem;
       color: var(--color-text-secondary);
       line-height: 1.45;
-      margin-bottom: 2rem;
+      margin-bottom: 1.25rem;
+    }
+    .app-purpose-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-md);
+      padding: 1rem 1.15rem;
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+    .purpose-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--color-navy);
+      margin-bottom: 0.35rem;
+    }
+    .purpose-text {
+      font-size: 0.8rem;
+      color: var(--color-text-secondary);
+      margin-bottom: 0.4rem;
+      line-height: 1.35;
+    }
+    .purpose-list {
+      padding-left: 1.1rem;
+      margin: 0;
+      font-size: 0.775rem;
+      color: #475569;
+      line-height: 1.4;
+      li {
+        margin-bottom: 0.2rem;
+      }
     }
     .auth-section {
       display: flex;
