@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
@@ -10,20 +10,18 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div [class.page-container]="!isModal" [class.modal-view-container]="isModal">
-      <!-- Cabeçalho (apenas quando não em modal) -->
-      @if (!isModal) {
-        <div class="page-header">
-          <div>
-            <h1 class="page-title">Configurações do Sistema</h1>
-            <p class="page-subtitle">Parâmetros globais de câmbio USD/BRL, simulador de taxas, eventos, categorias e status</p>
-          </div>
+    <div class="page-container">
+      <!-- Cabeçalho -->
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Configurações do Sistema</h1>
+          <p class="page-subtitle">Parâmetros globais de câmbio USD/BRL, simulador de taxas, eventos, categorias e status</p>
         </div>
-      }
+      </div>
 
       <div class="config-grid">
         <!-- 1. Painel de Câmbio USD -> BRL & Cotação em Tempo Real -->
-        <div class="card config-card full-width cambio-card">
+        <div class="card config-card full-width">
           <div class="card-header">
             <div>
               <h3>Cotação do Dólar & Política Cambial (USD → BRL)</h3>
@@ -44,7 +42,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
 
               <div class="market-rate-display">
                 <span class="currency-symbol">US$ 1 =</span>
-                <span class="rate-value">R$ {{ cotacaoMercado()?.cotacaoOficial | number:'1.4-4' }}</span>
+                <span class="rate-value">R$ {{ (cotacaoMercado()?.cotacaoOficial || 5.50) | number:'1.4-4' }}</span>
                 @if (cotacaoMercado()?.pctChange !== undefined) {
                   <span class="var-badge" [class.var-pos]="(cotacaoMercado()?.pctChange || 0) >= 0" [class.var-neg]="(cotacaoMercado()?.pctChange || 0) < 0">
                     {{ (cotacaoMercado()?.pctChange || 0) >= 0 ? '▲ +' : '▼ ' }}{{ cotacaoMercado()?.pctChange | number:'1.2-2' }}%
@@ -55,11 +53,11 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
               <div class="market-stats">
                 <div class="stat-item">
                   <span class="stat-label">Máxima do Dia</span>
-                  <span class="stat-val">R$ {{ cotacaoMercado()?.maximo | number:'1.4-4' }}</span>
+                  <span class="stat-val">R$ {{ (cotacaoMercado()?.maximo || 5.55) | number:'1.4-4' }}</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-label">Mínima do Dia</span>
-                  <span class="stat-val">R$ {{ cotacaoMercado()?.minimo | number:'1.4-4' }}</span>
+                  <span class="stat-val">R$ {{ (cotacaoMercado()?.minimo || 5.45) | number:'1.4-4' }}</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-label">Fonte</span>
@@ -69,7 +67,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
 
               <div class="market-footer">
                 <small>Última cotação: <strong>{{ cotacaoMercado()?.dataHoraCotacao || 'Hoje' }}</strong></small>
-                <button type="button" class="btn-copy-rate" (click)="copiarCotacaoMercado()">
+                <button type="button" class="btn btn-sm btn-outline btn-copy-rate" (click)="copiarCotacaoMercado()">
                   Copiar para Taxa do Sistema ➔
                 </button>
               </div>
@@ -90,21 +88,19 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
 
               <!-- Inserção de Taxa Livre pelo Usuário -->
               <div class="custom-sim-row">
-                <div class="form-group flex-1">
-                  <label class="form-label">Ou digite uma taxa personalizada:</label>
-                  <div class="input-group-custom">
-                    <span class="prefix">R$</span>
-                    <input type="number" step="0.0001" min="0.0001" class="form-control" 
-                           [(ngModel)]="simulacaoTaxaLivre" (input)="onTaxaLivreInput()" 
-                           placeholder="Ex: 4.4964">
-                  </div>
+                <label class="form-label" style="font-size: 0.78rem;">Ou digite uma taxa personalizada:</label>
+                <div class="input-group-custom">
+                  <span class="prefix">R$</span>
+                  <input type="number" step="0.0001" min="0.0001" class="form-control" 
+                         [(ngModel)]="simulacaoTaxaLivre" (input)="onTaxaLivreInput()" 
+                         placeholder="Ex: 4.4964">
                 </div>
               </div>
 
               <div class="simulacao-result">
                 <div class="result-row">
                   <span>Cotação Spot Mercado:</span>
-                  <strong>R$ {{ (cotacaoMercado()?.cotacaoOficial || 5.07) | number:'1.4-4' }}</strong>
+                  <strong>R$ {{ (cotacaoMercado()?.cotacaoOficial || 5.50) | number:'1.4-4' }}</strong>
                 </div>
                 <div class="result-row text-danger">
                   <span>Desconto de Spread/Taxas:</span>
@@ -279,7 +275,10 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       @if (showEventoModal()) {
         <div class="modal-backdrop" (click)="closeEventoModal()">
           <div class="modal-content" (click)="$event.stopPropagation()">
-            <h2>{{ editingEventoId() ? 'Editar Evento' : 'Novo Evento' }}</h2>
+            <div class="modal-header">
+              <h2 class="modal-title">{{ editingEventoId() ? 'Editar Evento' : 'Novo Evento' }}</h2>
+              <button class="btn-close" (click)="closeEventoModal()">✕</button>
+            </div>
             <form (ngSubmit)="saveEvento()">
               <div class="form-group">
                 <label class="form-label">Nome do Evento *</label>
@@ -302,7 +301,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
                 <label class="form-label">Descrição</label>
                 <textarea class="form-control" [(ngModel)]="eventoForm.descricao" name="descricao" rows="2"></textarea>
               </div>
-              <div class="modal-actions">
+              <div class="modal-footer">
                 <button type="button" class="btn btn-outline" (click)="closeEventoModal()">Cancelar</button>
                 <button type="submit" class="btn btn-primary">Salvar Evento</button>
               </div>
@@ -314,7 +313,10 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       @if (showCategoriaModal()) {
         <div class="modal-backdrop" (click)="closeCategoriaModal()">
           <div class="modal-content" (click)="$event.stopPropagation()">
-            <h2>{{ editingCategoriaId() ? 'Editar Categoria' : 'Nova Categoria' }}</h2>
+            <div class="modal-header">
+              <h2 class="modal-title">{{ editingCategoriaId() ? 'Editar Categoria' : 'Nova Categoria' }}</h2>
+              <button class="btn-close" (click)="closeCategoriaModal()">✕</button>
+            </div>
             <form (ngSubmit)="saveCategoria()">
               <div class="form-group">
                 <label class="form-label">Nome da Categoria *</label>
@@ -324,7 +326,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
                 <label class="form-label">Descrição</label>
                 <textarea class="form-control" [(ngModel)]="categoriaForm.descricao" name="descricao" rows="2"></textarea>
               </div>
-              <div class="modal-actions">
+              <div class="modal-footer">
                 <button type="button" class="btn btn-outline" (click)="closeCategoriaModal()">Cancelar</button>
                 <button type="submit" class="btn btn-primary">Salvar Categoria</button>
               </div>
@@ -336,7 +338,10 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       @if (showStatusModal()) {
         <div class="modal-backdrop" (click)="closeStatusModal()">
           <div class="modal-content" (click)="$event.stopPropagation()">
-            <h2>{{ editingStatusId() ? 'Editar Status' : 'Novo Status' }}</h2>
+            <div class="modal-header">
+              <h2 class="modal-title">{{ editingStatusId() ? 'Editar Status' : 'Novo Status' }}</h2>
+              <button class="btn-close" (click)="closeStatusModal()">✕</button>
+            </div>
             <form (ngSubmit)="saveStatus()">
               <div class="form-group">
                 <label class="form-label">Nome do Status *</label>
@@ -349,7 +354,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
                   <input type="text" class="form-control" [(ngModel)]="statusForm.corBadge" name="corBadgeText" required>
                 </div>
               </div>
-              <div class="modal-actions">
+              <div class="modal-footer">
                 <button type="button" class="btn btn-outline" (click)="closeStatusModal()">Cancelar</button>
                 <button type="submit" class="btn btn-primary">Salvar Status</button>
               </div>
@@ -363,24 +368,23 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
     .page-container {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 1.5rem;
-    }
-    .modal-view-container {
-      padding: 0.5rem 0;
-      width: 100%;
+      padding: 1.75rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
     }
     .page-header {
-      margin-bottom: 1.5rem;
+      margin-bottom: 0.5rem;
     }
     .page-title {
       font-size: 1.75rem;
       font-weight: 700;
-      color: #FFFFFF;
+      color: var(--color-navy);
       margin-bottom: 0.25rem;
     }
     .page-subtitle {
-      font-size: 0.88rem;
-      color: #94A3B8;
+      font-size: 0.9rem;
+      color: var(--color-text-secondary);
     }
 
     .config-grid {
@@ -397,27 +401,21 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       align-items: center;
       justify-content: space-between;
       margin-bottom: 1rem;
-      h3 { font-size: 1.1rem; color: #FFFFFF; }
-      .card-subtitle { font-size: 0.82rem; color: #94A3B8; }
+      h3 { font-size: 1.15rem; color: var(--color-navy); font-weight: 700; }
+      .card-subtitle { font-size: 0.85rem; color: var(--color-text-secondary); }
     }
 
     /* Painel de Câmbio */
-    .cambio-card {
-      background: #161D26;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 1.25rem;
-    }
     .cambio-dashboard-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 1rem;
     }
     .cambio-box {
-      background: #0F1722;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 8px;
-      padding: 1rem;
+      background: #F8FAFC;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -431,12 +429,12 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
     .box-tag {
       font-size: 0.75rem;
       font-weight: 700;
-      color: #38BDF8;
+      color: #0284C7;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    .tag-purple { color: #C084FC; }
-    .tag-mint { color: #34D399; }
+    .tag-purple { color: #7B1BE0; }
+    .tag-mint { color: #00874C; }
 
     .market-rate-display {
       display: flex;
@@ -444,15 +442,15 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       gap: 0.5rem;
       margin: 0.5rem 0;
     }
-    .currency-symbol { font-size: 0.9rem; color: #94A3B8; }
-    .rate-value { font-size: 1.5rem; font-weight: 700; color: #FFFFFF; }
+    .currency-symbol { font-size: 0.9rem; color: var(--color-text-secondary); }
+    .rate-value { font-size: 1.5rem; font-weight: 700; color: var(--color-navy); }
     .var-badge {
       font-size: 0.75rem;
       font-weight: 700;
       padding: 0.15rem 0.4rem;
       border-radius: 4px;
-      &.var-pos { background: rgba(52, 211, 153, 0.15); color: #34D399; }
-      &.var-neg { background: rgba(239, 68, 68, 0.15); color: #EF4444; }
+      &.var-pos { background: rgba(0, 229, 130, 0.15); color: #00874C; }
+      &.var-neg { background: rgba(255, 77, 79, 0.15); color: #DC2626; }
     }
 
     .market-stats {
@@ -465,28 +463,24 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
     .stat-item {
       display: flex;
       justify-content: space-between;
-      .stat-label { color: #94A3B8; }
-      .stat-val { color: #E2E8F0; font-weight: 600; }
+      .stat-label { color: var(--color-text-secondary); }
+      .stat-val { color: var(--color-navy); font-weight: 600; }
     }
     .market-footer {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      border-top: 1px solid var(--color-border);
       padding-top: 0.75rem;
       font-size: 0.75rem;
-      color: #94A3B8;
+      color: var(--color-text-secondary);
     }
     .btn-copy-rate {
-      background: transparent;
-      border: 1px solid rgba(255, 153, 0, 0.35);
-      color: #FF9900;
-      padding: 0.4rem;
-      border-radius: 6px;
-      font-size: 0.78rem;
+      color: #B45309;
+      border-color: #FDE68A;
+      background: #FFFBEB;
       font-weight: 600;
-      cursor: pointer;
-      &:hover { background: rgba(255, 153, 0, 0.15); }
+      &:hover { background: #FEF3C7; }
     }
 
     .spread-presets {
@@ -496,20 +490,20 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       margin-bottom: 0.75rem;
       flex-wrap: wrap;
     }
-    .preset-label { font-size: 0.72rem; color: #94A3B8; }
+    .preset-label { font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 600; }
     .btn-preset {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #CBD5E1;
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      color: var(--color-navy);
       padding: 0.25rem 0.5rem;
       border-radius: 4px;
       font-size: 0.75rem;
       cursor: pointer;
+      font-weight: 600;
       &.active {
-        background: rgba(147, 51, 234, 0.25);
-        border-color: #A855F7;
-        color: #FFFFFF;
-        font-weight: 700;
+        background: var(--color-purple-subtle);
+        border-color: var(--color-purple);
+        color: #7B1BE0;
       }
     }
 
@@ -519,15 +513,18 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
     .input-group-custom {
       display: flex;
       align-items: center;
-      background: #161D26;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 6px;
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
       overflow: hidden;
+      margin-top: 0.25rem;
       .prefix {
         padding: 0 0.5rem;
         font-size: 0.8rem;
-        color: #94A3B8;
-        background: rgba(255, 255, 255, 0.04);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        background: #F1F5F9;
+        border-right: 1px solid var(--color-border);
       }
       .form-control {
         border: none;
@@ -537,7 +534,8 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
     }
 
     .simulacao-result {
-      background: rgba(255, 255, 255, 0.03);
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
       padding: 0.75rem;
       border-radius: 6px;
       margin-bottom: 0.75rem;
@@ -547,28 +545,26 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       justify-content: space-between;
       font-size: 0.8rem;
       margin-bottom: 0.25rem;
-      color: #94A3B8;
-      strong { color: #FFFFFF; }
+      color: var(--color-text-secondary);
+      strong { color: var(--color-navy); }
     }
     .result-total {
       font-size: 0.9rem;
-      border-top: 1px dashed rgba(255, 255, 255, 0.1);
+      border-top: 1px dashed var(--color-border);
       padding-top: 0.35rem;
       margin-top: 0.35rem;
-      strong { color: #34D399; }
+      strong { color: #059669; }
     }
     .result-example {
       margin-top: 0.5rem;
       padding-top: 0.4rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-      font-size: 0.72rem;
-      color: #CBD5E1;
+      border-top: 1px solid var(--color-border-light);
+      font-size: 0.75rem;
+      color: var(--color-text-secondary);
     }
-
     .btn-apply-sim {
       width: 100%;
-      padding: 0.5rem;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .cambio-form {
@@ -579,39 +575,39 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
     .input-prefix-group {
       display: flex;
       align-items: center;
-      background: #161D26;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 6px;
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
       overflow: hidden;
       .prefix {
         padding: 0 0.75rem;
         font-size: 0.9rem;
         font-weight: 700;
-        color: #FF9900;
-        background: rgba(255, 153, 0, 0.1);
+        color: #B45309;
+        background: #FFFBEB;
+        border-right: 1px solid #FDE68A;
       }
       .input-taxa {
         border: none;
         border-radius: 0;
         font-size: 1.1rem;
         font-weight: 700;
-        color: #FFFFFF;
+        color: var(--color-navy);
       }
     }
     .form-helper {
-      font-size: 0.72rem;
-      color: #64748B;
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
       margin-top: 0.25rem;
     }
     .cambio-meta {
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
-      font-size: 0.75rem;
-      color: #94A3B8;
+      font-size: 0.78rem;
+      color: var(--color-text-secondary);
     }
     .btn-save-cambio {
-      padding: 0.65rem;
       font-weight: 700;
       width: 100%;
     }
@@ -625,14 +621,21 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border: 1px solid var(--color-border);
     }
 
-    .modal-actions {
+    .input-color-group {
       display: flex;
-      justify-content: flex-end;
+      align-items: center;
       gap: 0.5rem;
-      margin-top: 1.5rem;
+      .color-picker {
+        width: 42px;
+        height: 38px;
+        padding: 0;
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        cursor: pointer;
+      }
     }
 
     @media (max-width: 992px) {
@@ -643,9 +646,6 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
   `]
 })
 export class ConfiguracoesComponent implements OnInit {
-  @Input() isModal = false;
-  @Output() onClose = new EventEmitter<void>();
-
   private api = inject(ApiService);
   private toast = inject(ToastService);
 
@@ -727,18 +727,18 @@ export class ConfiguracoesComponent implements OnInit {
     if (this.modoSimulacao === 'CUSTOM' && this.simulacaoTaxaLivre && this.simulacaoTaxaLivre > 0) {
       return this.simulacaoTaxaLivre;
     }
-    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.0700;
+    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.5000;
     return Number((spot * (1 - this.spreadPercentual / 100)).toFixed(4));
   }
 
   getDescontoSimulado(): number {
-    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.0700;
+    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.5000;
     const finalRate = this.getTaxaSimuladaFinal();
     return Math.max(0, spot - finalRate);
   }
 
   getPctSpreadSimulado(): number {
-    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.0700;
+    const spot = this.cotacaoMercado()?.cotacaoOficial || 5.5000;
     if (spot <= 0) return 0;
     return (this.getDescontoSimulado() / spot) * 100;
   }

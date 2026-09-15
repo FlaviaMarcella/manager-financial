@@ -80,7 +80,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
         </div>
 
         <div class="filter-footer">
-          <button class="btn btn-sm btn-outline" (click)="clearFilters()">Limpar Filtros</button>
+          <button class="btn btn-sm btn-outline btn-clear" (click)="clearFilters()">Limpar Filtros</button>
           <div class="filter-stats">
             <span class="stat-count">{{ lancamentos().length }} itens encontrados</span>
             <div class="filter-total">
@@ -92,8 +92,8 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       </div>
 
       <!-- Tabela de Lançamentos Fluida e Sem Scroll Horizontal -->
-      <div class="table-card">
-        <table class="responsive-table">
+      <div class="table-container">
+        <table class="custom-table">
           <thead>
             <tr>
               <th style="width: 100px;">Data</th>
@@ -109,7 +109,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
             @for (item of lancamentos(); track item.id) {
               <tr>
                 <td class="col-date">
-                  <span class="date-badge">{{ item.data | date:'dd/MM/yyyy' }}</span>
+                  <strong>{{ item.data | date:'dd/MM/yyyy' }}</strong>
                 </td>
                 <td class="col-desc">
                   <strong class="item-title">{{ item.descricao }}</strong>
@@ -117,7 +117,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                 </td>
                 <td class="col-event-cat">
                   <div class="event-name">{{ item.eventoNome }}</div>
-                  <span class="category-pill">{{ item.categoriaNome }}</span>
+                  <span class="badge badge-purple">{{ item.categoriaNome }}</span>
                 </td>
                 <td class="col-nf">
                   @if (item.numeroNotaFiscal) {
@@ -127,14 +127,14 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                   }
                 </td>
                 <td class="col-values">
-                  <div class="val-brl">{{ item.valorBrl | currencyBrl }}</div>
+                  <div class="val-brl"><strong>{{ item.valorBrl | currencyBrl }}</strong></div>
                   @if (item.valorUsd && item.valorUsd > 0) {
                     <div class="val-usd-meta">
                       <span class="val-usd">US$ {{ item.valorUsd | number:'1.2-2' }}</span>
-                      <span class="cambio-rate">Tx: R$ {{ item.taxaCambioUsada | number:'1.4-4' }}</span>
+                      <span class="cambio-rate">• Tx: R$ {{ item.taxaCambioUsada | number:'1.4-4' }}</span>
                     </div>
                     @if (calcularTaxaRetida(item) > 0.05) {
-                      <div class="fee-loss-tag" title="Valor retido em spread/taxas bancárias de conversão">
+                      <div class="fee-loss-tag" title="Valor retido em taxas de conversão">
                         Taxa: R$ {{ calcularTaxaRetida(item) | number:'1.2-2' }}
                       </div>
                     }
@@ -152,8 +152,8 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                     }
                   </div>
                 </td>
-                <td class="col-actions">
-                  <div class="actions-group">
+                <td class="col-actions" style="text-align: right;">
+                  <div class="action-buttons">
                     <button class="btn btn-sm btn-outline btn-details" (click)="openDetailsModal(item)" title="Visualizar todos os detalhes">
                       👁️ Detalhes
                     </button>
@@ -161,7 +161,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                       <button class="btn btn-sm btn-outline btn-icon" (click)="openModal(item)" title="Editar">
                         ✏️
                       </button>
-                      <button class="btn btn-sm btn-danger-outline btn-icon" (click)="excluir(item.id!)" title="Excluir">
+                      <button class="btn btn-sm btn-danger btn-icon" (click)="excluir(item.id!)" title="Excluir">
                         🗑️
                       </button>
                     }
@@ -170,11 +170,8 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
               </tr>
             } @empty {
               <tr>
-                <td colspan="7" class="empty-state">
-                  <div class="empty-content">
-                    <span class="empty-icon">📂</span>
-                    <p>Nenhum lançamento encontrado para os filtros selecionados.</p>
-                  </div>
+                <td colspan="7" class="empty-state" style="text-align: center; padding: 2.5rem 1rem; color: #64748B;">
+                  Nenhum lançamento encontrado para os filtros selecionados.
                 </td>
               </tr>
             }
@@ -309,7 +306,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                   <div class="form-group col-6">
                     <label class="form-label required">Forma de Pagamento:</label>
                     <select class="form-select" [(ngModel)]="formData.formaPagamento" name="formaPagamento" required>
-                      <option value="Cartão de Crédito">Cartão de Crédito Corporativo</option>
+                      <option value="Cartão de Crédito Corporativo">Cartão de Crédito Corporativo</option>
                       <option value="Cartão de Débito">Cartão de Débito</option>
                       <option value="PIX">PIX</option>
                       <option value="Boleto">Boleto Bancário</option>
@@ -359,7 +356,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
           <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
             <div class="modal-header">
               <div class="header-left">
-                <span class="header-badge">ID #{{ selectedLancamento()!.id }}</span>
+                <span class="badge badge-navy">ID #{{ selectedLancamento()!.id }}</span>
                 <h2 class="modal-title">Detalhes do Lançamento</h2>
               </div>
               <button class="btn-close" (click)="closeDetailsModal()">✕</button>
@@ -477,40 +474,42 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
   `,
   styles: [`
     .page-container {
-      max-width: 1440px;
+      max-width: 1400px;
       margin: 0 auto;
-      padding: 1.5rem;
+      padding: 1.75rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
     }
     .page-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
       gap: 1rem;
     }
     .page-title {
       font-size: 1.75rem;
       font-weight: 700;
-      color: #FFFFFF;
+      color: var(--color-navy);
       margin-bottom: 0.25rem;
     }
     .page-subtitle {
-      font-size: 0.88rem;
-      color: #94A3B8;
+      font-size: 0.9rem;
+      color: var(--color-text-secondary);
     }
 
     /* Filtros Alinhados */
     .filter-card {
-      background: #161D26;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 1.25rem;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--shadow-sm);
     }
     .filters-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 1rem;
       align-items: flex-end;
     }
@@ -518,38 +517,40 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       display: flex;
       flex-direction: column;
       gap: 0.35rem;
+      margin-bottom: 0;
     }
     .form-label {
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       font-weight: 600;
-      color: #CBD5E1;
+      color: var(--color-navy);
       white-space: nowrap;
       &.required::after {
         content: ' *';
         color: #EF4444;
       }
     }
-    .form-control, .form-select {
-      background: #0F1722;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #FFFFFF;
-      padding: 0.5rem 0.75rem;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      height: 38px;
-      &:focus {
-        border-color: #FF9900;
-        outline: none;
-        box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.2);
-      }
+    .form-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 0.85rem;
     }
+    .col-4 { flex: 4; }
+    .col-6 { flex: 6; }
+    .col-8 { flex: 8; }
+
     .filter-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-top: 1.25rem;
       padding-top: 1rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      border-top: 1px solid var(--color-border-light);
+    }
+    .btn-clear {
+      color: var(--color-navy);
+      border-color: #CBD5E1;
+      font-weight: 600;
+      &:hover { background: #F8FAFC; }
     }
     .filter-stats {
       display: flex;
@@ -557,135 +558,80 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       gap: 1.25rem;
     }
     .stat-count {
-      font-size: 0.82rem;
-      color: #94A3B8;
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
     }
     .filter-total {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      background: rgba(255, 153, 0, 0.08);
-      border: 1px solid rgba(255, 153, 0, 0.25);
+      background: var(--color-amber-subtle);
+      border: 1px solid rgba(255, 153, 0, 0.3);
       padding: 0.35rem 0.75rem;
-      border-radius: 6px;
+      border-radius: var(--radius-pill);
     }
     .total-label {
       font-size: 0.82rem;
-      color: #CBD5E1;
+      color: #92400E;
+      font-weight: 600;
     }
     .total-val {
       font-size: 1.05rem;
-      color: #FF9900;
+      color: #B45309;
       font-weight: 700;
     }
 
-    /* Tabela Fluida Sem Scroll */
-    .table-card {
-      background: #161D26;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-      width: 100%;
-    }
-    .responsive-table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 0.85rem;
-
-      thead {
-        background: #0E1620;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.08);
-        th {
-          padding: 0.85rem 1rem;
-          font-weight: 600;
-          color: #94A3B8;
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-      }
-
-      tbody tr {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-        transition: background-color 0.15s ease;
-        &:hover {
-          background-color: rgba(255, 255, 255, 0.025);
-        }
-        &:last-child {
-          border-bottom: none;
-        }
-        td {
-          padding: 0.85rem 1rem;
-          vertical-align: middle;
-        }
-      }
-    }
-
-    .date-badge {
-      font-weight: 600;
-      color: #E2E8F0;
-      white-space: nowrap;
+    /* Tabela */
+    .table-container {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      box-shadow: var(--shadow-sm);
     }
     .item-title {
-      display: block;
-      color: #FFFFFF;
-      font-size: 0.88rem;
-      margin-bottom: 0.15rem;
+      color: var(--color-navy);
+      font-size: 0.9rem;
     }
     .supplier-text {
       font-size: 0.78rem;
-      color: #94A3B8;
-      span { color: #CBD5E1; }
+      color: var(--color-text-secondary);
+      span { color: var(--color-navy); font-weight: 600; }
     }
     .event-name {
       font-size: 0.82rem;
       font-weight: 600;
-      color: #CBD5E1;
+      color: var(--color-navy);
       margin-bottom: 0.2rem;
     }
-    .category-pill {
-      display: inline-block;
-      font-size: 0.68rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      padding: 0.15rem 0.45rem;
-      background: rgba(147, 51, 234, 0.15);
-      color: #C084FC;
-      border: 1px solid rgba(147, 51, 234, 0.3);
-      border-radius: 4px;
-    }
     .nf-code {
-      background: rgba(255, 255, 255, 0.06);
+      background: #F1F5F9;
       padding: 0.2rem 0.4rem;
       border-radius: 4px;
       font-size: 0.78rem;
-      color: #E2E8F0;
+      color: var(--color-navy);
     }
     .val-brl {
-      font-weight: 700;
       font-size: 0.95rem;
-      color: #FFFFFF;
+      color: var(--color-navy);
     }
     .val-usd-meta {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      margin-top: 0.15rem;
-    }
-    .val-usd {
+      gap: 0.35rem;
       font-size: 0.78rem;
-      color: #94A3B8;
-    }
-    .cambio-rate {
-      font-size: 0.72rem;
-      color: #64748B;
+      color: var(--color-text-secondary);
     }
     .fee-loss-tag {
-      font-size: 0.7rem;
-      color: #F59E0B;
-      margin-top: 0.1rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #B45309;
+      background: #FEF3C7;
+      border: 1px solid #FDE68A;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 0.2rem;
     }
 
     .status-stack {
@@ -700,46 +646,33 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       padding: 0.2rem 0.5rem;
       border-radius: 9999px;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
       border: 1px solid;
     }
     .btn-anexo {
       background: transparent;
-      border: 1px solid rgba(56, 189, 248, 0.35);
-      color: #38BDF8;
+      border: 1px solid #38BDF8;
+      color: #0284C7;
       padding: 0.15rem 0.45rem;
       border-radius: 4px;
       font-size: 0.72rem;
       cursor: pointer;
-      &:hover {
-        background: rgba(56, 189, 248, 0.15);
-      }
+      font-weight: 600;
+      &:hover { background: rgba(56, 189, 248, 0.1); }
     }
 
-    .actions-group {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      justify-content: flex-end;
-    }
     .btn-details {
       font-size: 0.78rem;
       padding: 0.35rem 0.6rem;
-      border-color: rgba(255, 255, 255, 0.15);
-      color: #E2E8F0;
-      &:hover {
-        background: rgba(255, 255, 255, 0.08);
-      }
-    }
-    .btn-icon {
-      padding: 0.35rem 0.5rem;
-      font-size: 0.8rem;
+      color: var(--color-navy);
+      border-color: #CBD5E1;
+      font-weight: 600;
+      &:hover { background: #F8FAFC; border-color: var(--color-navy); }
     }
 
-    /* Painel de Cálculo de Câmbio no Modal */
+    /* Modal Form Cálculos */
     .cambio-calc-card {
-      background: rgba(255, 153, 0, 0.04);
-      border: 1px solid rgba(255, 153, 0, 0.25);
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
       border-radius: 8px;
       padding: 1rem;
       margin-bottom: 1rem;
@@ -753,28 +686,30 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .calc-title {
       font-size: 0.88rem;
       font-weight: 700;
-      color: #FF9900;
+      color: #B45309;
     }
     .calc-badge {
       font-size: 0.75rem;
-      color: #CBD5E1;
-      background: rgba(255, 255, 255, 0.06);
+      color: #78350F;
+      background: #FEF3C7;
       padding: 0.2rem 0.5rem;
       border-radius: 4px;
+      font-weight: 600;
     }
     .input-prefix-group {
       display: flex;
       align-items: center;
-      background: #0F1722;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 6px;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: var(--radius-sm);
       overflow: hidden;
       .input-prefix {
-        padding: 0 0.6rem;
-        font-size: 0.8rem;
-        color: #94A3B8;
-        background: rgba(255, 255, 255, 0.04);
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 0 0.65rem;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #64748B;
+        background: #F8FAFC;
+        border-right: 1px solid #CBD5E1;
       }
       .form-control {
         border: none;
@@ -783,12 +718,11 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       }
     }
     .calc-summary-box {
-      margin-top: 0.85rem;
-      padding: 0.85rem 1rem;
-      background: #0B1118;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 153, 0, 0.35);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      margin-top: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: #FFFFFF;
+      border-radius: 6px;
+      border: 1px solid #FCD34D;
     }
     .summary-grid {
       display: grid;
@@ -798,23 +732,22 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .sum-item {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.15rem;
     }
     .sum-label {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 600;
-      color: #94A3B8;
+      color: #64748B;
       text-transform: uppercase;
-      letter-spacing: 0.03em;
     }
     .sum-val {
-      font-size: 1.05rem;
+      font-size: 0.95rem;
       font-weight: 700;
-      color: #FFFFFF;
+      color: var(--color-navy);
     }
-    .text-mint { color: #34D399 !important; }
-    .text-amber { color: #FBBF24 !important; }
-    .text-warning { color: #F87171 !important; }
+    .text-mint { color: #059669 !important; }
+    .text-amber { color: #D97706 !important; }
+    .text-warning { color: #DC2626 !important; }
 
     /* Modal Details */
     .details-body {
@@ -825,11 +758,11 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .section-title {
       font-size: 0.88rem;
       font-weight: 700;
-      color: #CBD5E1;
+      color: var(--color-navy);
       text-transform: uppercase;
       letter-spacing: 0.05em;
       margin-bottom: 0.75rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid var(--color-border-light);
       padding-bottom: 0.35rem;
     }
     .details-grid {
@@ -845,17 +778,18 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     }
     .detail-label {
       font-size: 0.72rem;
-      color: #94A3B8;
+      color: #64748B;
       text-transform: uppercase;
+      font-weight: 600;
     }
     .detail-value {
       font-size: 0.9rem;
-      color: #FFFFFF;
+      color: var(--color-navy);
       &.text-lg { font-size: 1.05rem; }
     }
     .cambio-breakdown-card {
-      background: #0F1722;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #F8FAFC;
+      border: 1px solid var(--color-border);
       border-radius: 8px;
       padding: 1rem;
     }
@@ -870,38 +804,35 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       gap: 0.2rem;
       small { font-size: 0.7rem; color: #64748B; }
     }
-    .b-label { font-size: 0.72rem; color: #94A3B8; }
-    .b-val { font-size: 1.05rem; color: #FFFFFF; }
-    .highlight-green .b-val { color: #10B981; }
-    .highlight-amber .b-val { color: #F59E0B; }
-    .highlight-warning .b-val { color: #EF4444; }
+    .b-label { font-size: 0.72rem; color: #64748B; font-weight: 600; }
+    .b-val { font-size: 1.05rem; color: var(--color-navy); font-weight: 700; }
+    .highlight-green .b-val { color: #059669; }
+    .highlight-amber .b-val { color: #D97706; }
+    .highlight-warning .b-val { color: #DC2626; }
 
     .anexo-box {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #0F1722;
+      background: #F8FAFC;
       padding: 0.75rem 1rem;
       border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--color-border);
     }
     .notes-text {
-      background: #0F1722;
+      background: #F8FAFC;
       padding: 0.75rem 1rem;
       border-radius: 6px;
-      color: #E2E8F0;
+      color: var(--color-navy);
       font-size: 0.85rem;
       line-height: 1.5;
+      border: 1px solid var(--color-border);
     }
 
     @media (max-width: 992px) {
-      .summary-grid, .breakdown-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      .details-grid {
-        grid-template-columns: 1fr;
-        .detail-item.full-width { grid-column: span 1; }
-      }
+      .form-row { flex-direction: column; }
+      .summary-grid, .breakdown-grid { grid-template-columns: repeat(2, 1fr); }
+      .details-grid { grid-template-columns: 1fr; .detail-item.full-width { grid-column: span 1; } }
     }
   `]
 })
@@ -935,7 +866,7 @@ export class LancamentosComponent implements OnInit {
     valorBrl: 0,
     valorUsd: 0,
     taxaCambioUsada: 5.5000,
-    formaPagamento: 'Cartão de Crédito'
+    formaPagamento: 'Cartão de Crédito Corporativo'
   };
 
   selectedFile: File | null = null;
@@ -979,14 +910,12 @@ export class LancamentosComponent implements OnInit {
     return this.lancamentos().reduce((acc, curr) => acc + (curr.valorBrl || 0), 0);
   }
 
-  // Cálculos Inteligentes
   onBrlChange() {
     const brl = Number(this.formData.valorBrl) || 0;
     const usd = Number(this.formData.valorUsd) || 0;
     const taxa = Number(this.formData.taxaCambioUsada) || 0;
 
     if (usd > 0) {
-      // Se USD já está preenchido, calcula a taxa efetiva (ex: R$ 630 / US$ 140.11 = 4.4964)
       this.formData.taxaCambioUsada = Number((brl / usd).toFixed(4));
     } else if (taxa > 0) {
       this.formData.valorUsd = Number((brl / taxa).toFixed(2));
@@ -1053,7 +982,7 @@ export class LancamentosComponent implements OnInit {
         valorBrl: 0,
         valorUsd: 0,
         taxaCambioUsada: defaultTaxa,
-        formaPagamento: 'Cartão de Crédito'
+        formaPagamento: 'Cartão de Crédito Corporativo'
       };
     }
     this.selectedFile = null;
