@@ -52,8 +52,8 @@ services:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 25s
+      retries: 10
+      start_period: 45s
     deploy:
       resources:
         limits:
