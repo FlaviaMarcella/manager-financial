@@ -37,7 +37,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
       JWT_SECRET: ${JWT_SECRET:-9a8b7c6d5e4f3g2h1i0j9k8l7m6n5o4p3q2r1s0t9u8v7w6x5y4z3a2b1c0d9e8f}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-dummy-google-client-id}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-270889581394-8snua48fsgd0t7fbfbhstrh2jfbjho14.apps.googleusercontent.com}
       STORAGE_TYPE: ${STORAGE_TYPE:-local}
       AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}

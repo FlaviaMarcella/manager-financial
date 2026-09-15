@@ -211,16 +211,73 @@ export class LoginComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   isLoading = signal(false);
+  private readonly GOOGLE_CLIENT_ID = '270889581394-8snua48fsgd0t7fbfbhstrh2jfbjho14.apps.googleusercontent.com';
 
   ngOnInit() {
     if (this.authService.isAuthenticated()) {
       this.router.navigate(['/dashboard']);
+      return;
+    }
+
+    this.initGoogleAuth();
+  }
+
+  initGoogleAuth() {
+    if (typeof google !== 'undefined' && google.accounts?.id) {
+      google.accounts.id.initialize({
+        client_id: this.GOOGLE_CLIENT_ID,
+        callback: (response: any) => this.handleGoogleCredential(response),
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+
+      // Renderiza o botão oficial do Google no container
+      const btnContainer = document.getElementById('google-btn-container');
+      if (btnContainer) {
+        google.accounts.id.renderButton(btnContainer, {
+          theme: 'outline',
+          size: 'large',
+          type: 'standard',
+          shape: 'rectangular',
+          text: 'signin_with',
+          logo_alignment: 'left',
+          width: 380,
+          locale: 'pt-BR'
+        });
+      }
+    } else {
+      // Se o script do Google demorar para carregar, tenta novamente após 500ms
+      setTimeout(() => this.initGoogleAuth(), 500);
     }
   }
 
+  handleGoogleCredential(response: any) {
+    if (!response || !response.credential) {
+      this.toast.error('Não foi possível obter as credenciais do Google.');
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.authService.loginWithGoogle(response.credential).subscribe({
+      next: (res) => {
+        this.isLoading.set(false);
+        this.toast.success(`Bem-vindo(a), ${res.nome}!`);
+        const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+        this.router.navigateByUrl(returnUrl);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.toast.error(err.error?.message || 'Falha ao autenticar com o Google.');
+      }
+    });
+  }
+
   loginWithGooglePrompt() {
-    // Simula autenticação com token do Google
-    this.quickLogin('admin@studentbuilder.aws', 'Admin Student Builder');
+    if (typeof google !== 'undefined' && google.accounts?.id) {
+      google.accounts.id.prompt();
+    } else {
+      this.quickLogin('admin@studentbuilder.aws', 'Admin Student Builder');
+    }
   }
 
   quickLogin(email: string, name: string) {
