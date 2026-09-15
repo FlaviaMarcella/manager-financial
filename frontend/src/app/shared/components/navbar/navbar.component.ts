@@ -2,13 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { ConfiguracoesComponent } from '../../../pages/configuracoes/configuracoes.component';
-import { UsuariosComponent } from '../../../pages/usuarios/usuarios.component';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, ConfiguracoesComponent, UsuariosComponent],
+  imports: [CommonModule, RouterModule],
   template: `
     <header class="navbar">
       <div class="navbar-container">
@@ -27,7 +25,7 @@ import { UsuariosComponent } from '../../../pages/usuarios/usuarios.component';
           </a>
         </div>
 
-        <!-- 2. Menu de Navegação Centralizado (Centro) - 6 Módulos Principais -->
+        <!-- 2. Menu de Navegação Centralizado (Centro) - Apenas os 6 Módulos Principais -->
         <nav class="navbar-nav" [class.mobile-open]="mobileMenuOpen()">
           <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">
             <span class="nav-icon">📊</span>
@@ -57,29 +55,29 @@ import { UsuariosComponent } from '../../../pages/usuarios/usuarios.component';
           <!-- Opções Admin no menu mobile -->
           @if (authService.isAdmin()) {
             <div class="mobile-admin-divider"></div>
-            <button class="mobile-admin-btn" (click)="openConfigModal(); closeMenu()">
+            <a routerLink="/configuracoes" routerLinkActive="active" (click)="closeMenu()">
               <span class="nav-icon">⚙️</span>
-              <span>Configurações & Câmbio</span>
-            </button>
-            <button class="mobile-admin-btn" (click)="openUsersModal(); closeMenu()">
+              <span>Configurações</span>
+            </a>
+            <a routerLink="/usuarios" routerLinkActive="active" (click)="closeMenu()">
               <span class="nav-icon">👥</span>
               <span>Gestão de Usuários</span>
-            </button>
+            </a>
           }
         </nav>
 
-        <!-- 3. Ações Admin, Usuário & Logout (Direita) -->
+        <!-- 3. Ações Admin Condensadas, Usuário & Logout (Direita) -->
         <div class="navbar-actions">
           @if (authService.isAdmin()) {
-            <div class="admin-quick-actions">
-              <button class="btn-admin-modal" (click)="openConfigModal()" title="Configurações do Sistema & Câmbio">
+            <div class="admin-quick-links">
+              <a routerLink="/configuracoes" routerLinkActive="active-admin" class="btn-admin-pill" title="Configurações do Sistema & Câmbio">
                 <span class="admin-icon">⚙️</span>
-                <span class="admin-label">Config</span>
-              </button>
-              <button class="btn-admin-modal" (click)="openUsersModal()" title="Gestão de Usuários & Permissões">
+                <span>Config</span>
+              </a>
+              <a routerLink="/usuarios" routerLinkActive="active-admin" class="btn-admin-pill" title="Gestão de Usuários & Permissões">
                 <span class="admin-icon">👥</span>
-                <span class="admin-label">Usuários</span>
-              </button>
+                <span>Usuários</span>
+              </a>
             </div>
             <span class="action-divider"></span>
           }
@@ -110,48 +108,6 @@ import { UsuariosComponent } from '../../../pages/usuarios/usuarios.component';
       <!-- Backdrop móvel -->
       @if (mobileMenuOpen()) {
         <div class="menu-backdrop" (click)="closeMenu()"></div>
-      }
-
-      <!-- Modal de Configurações Acionado por Botão -->
-      @if (showConfigModal()) {
-        <div class="modal-backdrop modal-admin-backdrop" (click)="closeConfigModal()">
-          <div class="modal-content modal-admin-large" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <div class="modal-title-wrap">
-                <span class="modal-badge-icon">⚙️</span>
-                <div>
-                  <h2 class="modal-title">Configurações do Sistema & Câmbio</h2>
-                  <p class="modal-subtitle">Parâmetros de câmbio USD/BRL, simulador de spread, categorias e eventos</p>
-                </div>
-              </div>
-              <button class="btn-close" (click)="closeConfigModal()">✕</button>
-            </div>
-            <div class="modal-scroll-area">
-              <app-configuracoes [isModal]="true" (onClose)="closeConfigModal()"></app-configuracoes>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Modal de Gestão de Usuários Acionado por Botão -->
-      @if (showUsersModal()) {
-        <div class="modal-backdrop modal-admin-backdrop" (click)="closeUsersModal()">
-          <div class="modal-content modal-admin-large" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <div class="modal-title-wrap">
-                <span class="modal-badge-icon">👥</span>
-                <div>
-                  <h2 class="modal-title">Gestão de Usuários & Acessos</h2>
-                  <p class="modal-subtitle">Aprovação de solicitações pendentes, permissões e governança</p>
-                </div>
-              </div>
-              <button class="btn-close" (click)="closeUsersModal()">✕</button>
-            </div>
-            <div class="modal-scroll-area">
-              <app-usuarios [isModal]="true" (onClose)="closeUsersModal()"></app-usuarios>
-            </div>
-          </div>
-        </div>
       }
     </header>
   `,
@@ -295,21 +251,21 @@ import { UsuariosComponent } from '../../../pages/usuarios/usuarios.component';
       flex-shrink: 0;
     }
 
-    .admin-quick-actions {
+    .admin-quick-links {
       display: flex;
       align-items: center;
       gap: 0.35rem;
     }
 
-    .btn-admin-modal {
+    .btn-admin-pill {
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.12);
       color: #CBD5E1;
-      padding: 0.35rem 0.6rem;
+      padding: 0.32rem 0.65rem;
       border-radius: 6px;
       font-size: 0.8rem;
       font-weight: 500;
-      cursor: pointer;
+      text-decoration: none;
       display: flex;
       align-items: center;
       gap: 0.35rem;
@@ -320,6 +276,12 @@ import { UsuariosComponent } from '../../../pages/usuarios/usuarios.component';
         background: rgba(255, 153, 0, 0.15);
         border-color: rgba(255, 153, 0, 0.35);
         color: #FFB340;
+      }
+      &.active-admin {
+        background: rgba(255, 153, 0, 0.2);
+        border-color: #FF9900;
+        color: #FFB340;
+        font-weight: 600;
       }
     }
 
@@ -443,25 +405,6 @@ import { UsuariosComponent } from '../../../pages/usuarios/usuarios.component';
       margin: 0.5rem 0;
     }
 
-    .mobile-admin-btn {
-      background: transparent;
-      border: none;
-      color: #CBD5E1;
-      padding: 0.75rem 1rem;
-      font-size: 0.92rem;
-      font-weight: 500;
-      text-align: left;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-      border-radius: 8px;
-      &:hover {
-        background: rgba(255, 255, 255, 0.06);
-        color: #FFFFFF;
-      }
-    }
-
     .menu-backdrop {
       position: fixed;
       top: 0;
@@ -473,60 +416,12 @@ import { UsuariosComponent } from '../../../pages/usuarios/usuarios.component';
       z-index: 501;
     }
 
-    /* Modais Grandes de Administração */
-    .modal-admin-backdrop {
-      z-index: 1000;
-    }
-    .modal-admin-large {
-      max-width: 1100px;
-      width: 95%;
-      max-height: 88vh;
-      display: flex;
-      flex-direction: column;
-      background: #161D26;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px;
-      padding: 0;
-      overflow: hidden;
-    }
-    .modal-header {
-      padding: 1.25rem 1.5rem;
-      background: #0E1620;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .modal-title-wrap {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .modal-badge-icon {
-      font-size: 1.5rem;
-    }
-    .modal-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #FFFFFF;
-      margin-bottom: 0.15rem;
-    }
-    .modal-subtitle {
-      font-size: 0.8rem;
-      color: #94A3B8;
-    }
-    .modal-scroll-area {
-      padding: 1.5rem;
-      overflow-y: auto;
-      max-height: calc(88vh - 80px);
-    }
-
     /* Breakpoints */
     @media (max-width: 1100px) {
       .mobile-toggle {
         display: flex;
       }
-      .admin-quick-actions {
+      .admin-quick-links {
         display: none;
       }
       .action-divider {
@@ -576,31 +471,12 @@ export class NavbarComponent {
   authService = inject(AuthService);
   mobileMenuOpen = signal(false);
 
-  showConfigModal = signal(false);
-  showUsersModal = signal(false);
-
   toggleMenu() {
     this.mobileMenuOpen.update(v => !v);
   }
 
   closeMenu() {
     this.mobileMenuOpen.set(false);
-  }
-
-  openConfigModal() {
-    this.showConfigModal.set(true);
-  }
-
-  closeConfigModal() {
-    this.showConfigModal.set(false);
-  }
-
-  openUsersModal() {
-    this.showUsersModal.set(true);
-  }
-
-  closeUsersModal() {
-    this.showUsersModal.set(false);
   }
 
   logout() {

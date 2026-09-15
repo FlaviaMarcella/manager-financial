@@ -783,28 +783,38 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       }
     }
     .calc-summary-box {
-      margin-top: 0.75rem;
-      padding: 0.75rem;
-      background: #0F1722;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      margin-top: 0.85rem;
+      padding: 0.85rem 1rem;
+      background: #0B1118;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 153, 0, 0.35);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 0.5rem;
+      gap: 0.75rem;
     }
     .sum-item {
       display: flex;
       flex-direction: column;
+      gap: 0.25rem;
     }
     .sum-label {
-      font-size: 0.7rem;
+      font-size: 0.72rem;
+      font-weight: 600;
       color: #94A3B8;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
     }
     .sum-val {
-      font-size: 0.95rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #FFFFFF;
     }
+    .text-mint { color: #34D399 !important; }
+    .text-amber { color: #FBBF24 !important; }
+    .text-warning { color: #F87171 !important; }
 
     /* Modal Details */
     .details-body {
