@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -10,7 +10,7 @@ declare const google: any;
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   template: `
     <div class="login-page">
       <div class="login-card">
@@ -18,40 +18,63 @@ declare const google: any;
         <div class="logo-wrapper">
           <img src="/assets/brandmarks/AWS Student Builder Group_RGB_Brandmark_White.png" 
                alt="AWS Student Builder Group" 
-               class="login-logo">
+               class="login-logo"
+               (error)="handleLogoError($event)">
         </div>
 
         <div class="login-header">
+          <span class="app-tag">AWS SBG Finance</span>
           <h1 class="login-title">Gestão Financeira</h1>
-          <p class="login-subtitle">Sistema unificado de orçamento, notas fiscais, parcerias e brindes</p>
+          <p class="login-subtitle">Sistema oficial de controle orçamentário, prestação de contas, parcerias e brindes do <strong>AWS Student Builder Group</strong>.</p>
         </div>
 
-        <!-- Botão Google Sign-In Oficial -->
-        <div class="auth-section">
-          <div id="google-btn-container" class="google-btn-wrapper"></div>
-          <div *ngIf="isLoading()" class="loading-indicator">
-            <span class="spinner"></span> Autenticando com Google...
+        <!-- Estado: Solicitação Pendente de Aprovação -->
+        @if (pendingUser()) {
+          <div class="pending-card">
+            <div class="pending-icon">⏳</div>
+            <h2 class="pending-title">Solicitação em Análise</h2>
+            <p class="pending-desc">
+              Olá, <strong>{{ pendingUser()?.nome }}</strong> (<code>{{ pendingUser()?.email }}</code>)!
+            </p>
+            <div class="pending-box">
+              <p>
+                Sua solicitação de acesso foi registrada no sistema. Por razões de confidencialidade dos dados financeiros, 
+                um <strong>Administrador do grupo</strong> precisa aprovar seu perfil antes de liberar o acesso.
+              </p>
+              <div class="pending-status-badge">
+                Status: Aguardando Aprovação
+              </div>
+            </div>
+            <p class="pending-hint">
+              Assim que o seu acesso for aprovado pela liderança, basta clicar novamente em <em>Entrar com Google</em>.
+            </p>
+            <button class="btn btn-outline full-width" (click)="resetPending()">
+              Voltar à tela de login
+            </button>
           </div>
-        </div>
+        } @else {
+          <!-- Formulário Normal de Login Google -->
+          <div class="auth-section">
+            <div id="google-btn-container" class="google-btn-wrapper"></div>
+            @if (isLoading()) {
+              <div class="loading-indicator">
+                <span class="spinner"></span> Validando credenciais do Google...
+              </div>
+            }
+          </div>
 
-        <div class="divider">
-          <span>OU ACESSO RÁPIDO PARA AVALIAÇÃO</span>
-        </div>
-
-        <!-- Login Rápido para Demonstração Local -->
-        <div class="quick-access">
-          <button class="btn btn-primary quick-btn" (click)="quickLogin('admin@studentbuilder.aws', 'Administrador SBG')">
-            <span class="btn-role-tag">ADMIN</span>
-            Entrar como Líder / Administrador
-          </button>
-          <button class="btn btn-outline quick-btn quick-btn-viewer" (click)="quickLogin('membro@studentbuilder.aws', 'Membro da Equipe')">
-            <span class="btn-role-tag role-viewer">VIEWER</span>
-            Entrar como Visitante / Membro
-          </button>
-        </div>
+          <div class="security-notice">
+            <span class="lock-icon">🔒</span>
+            <span>Acesso seguro e restrito a membros autorizados do AWS Student Builder Group.</span>
+          </div>
+        }
 
         <div class="login-footer">
-          <p>Acesso público em modo leitura para todos os membros autenticados. Edição restrita à equipe de organização.</p>
+          <p>
+            Ao utilizar este sistema, você concorda com nossos 
+            <a routerLink="/termos" class="legal-link">Termos de Serviço</a> e 
+            <a routerLink="/privacidade" class="legal-link">Política de Privacidade</a>.
+          </p>
         </div>
       </div>
     </div>
@@ -81,7 +104,7 @@ declare const google: any;
       padding: 1.25rem;
       border-radius: var(--radius-md);
       display: inline-block;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
       box-shadow: var(--shadow-md);
       border: 1px solid var(--color-navy-subtle);
     }
@@ -89,6 +112,18 @@ declare const google: any;
       height: 48px;
       width: auto;
       display: block;
+    }
+    .app-tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #FF9900;
+      background: rgba(255, 153, 0, 0.12);
+      border: 1px solid rgba(255, 153, 0, 0.3);
+      padding: 0.2rem 0.6rem;
+      border-radius: var(--radius-pill);
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.05em;
     }
     .login-title {
       font-size: 1.6rem;
@@ -98,102 +133,104 @@ declare const google: any;
     .login-subtitle {
       font-size: 0.875rem;
       color: var(--color-text-secondary);
-      line-height: 1.4;
+      line-height: 1.45;
       margin-bottom: 2rem;
     }
     .auth-section {
       display: flex;
       flex-direction: column;
+      align-items: center;
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
-    .btn-google-custom {
+    .google-btn-wrapper {
+      display: flex;
+      justify-content: center;
       width: 100%;
-      background: #FFFFFF;
-      color: #3C4043;
-      border: 1px solid #DADCE0;
-      border-radius: var(--radius-sm);
-      font-size: 0.95rem;
-      font-weight: 600;
-      padding: 0.75rem;
+      min-height: 44px;
+    }
+    .security-notice {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.75rem;
-      cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-      transition: all var(--transition-fast);
-      &:hover {
-        background: #F8F9FA;
-        border-color: #C2C6CA;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-      }
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      margin-bottom: 1.5rem;
+      padding: 0.6rem;
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: var(--radius-sm);
     }
-    .google-icon {
-      width: 20px;
-      height: 20px;
+    .pending-card {
+      background: #FFFDF0;
+      border: 1px solid #FFE082;
+      border-radius: var(--radius-md);
+      padding: 1.5rem 1.25rem;
+      margin-bottom: 1.5rem;
+      text-align: left;
     }
-    .divider {
-      position: relative;
-      margin: 1.5rem 0;
+    .pending-icon {
+      font-size: 2rem;
       text-align: center;
-      &::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: var(--color-border);
-      }
-      span {
-        position: relative;
-        background: var(--color-surface);
-        padding: 0 0.75rem;
-        font-size: 0.7rem;
-        font-weight: 700;
-        color: var(--color-text-muted);
-        letter-spacing: 0.05em;
-      }
+      margin-bottom: 0.5rem;
     }
-    .quick-access {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-bottom: 1.75rem;
+    .pending-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #B78103;
+      text-align: center;
+      margin-bottom: 0.5rem;
     }
-    .quick-btn {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      font-size: 0.875rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .pending-desc {
+      font-size: 0.85rem;
+      color: var(--color-navy);
+      text-align: center;
+      margin-bottom: 1rem;
     }
-    .quick-btn-viewer {
-      border-color: var(--color-purple);
-      color: var(--color-purple);
-      &:hover {
-        background-color: var(--color-purple-subtle);
-      }
+    .pending-box {
+      background: #FFFFFF;
+      border: 1px solid rgba(183, 129, 3, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      font-size: 0.825rem;
+      color: var(--color-text-secondary);
+      line-height: 1.45;
+      margin-bottom: 1rem;
     }
-    .btn-role-tag {
-      font-size: 0.65rem;
-      font-weight: 800;
-      padding: 0.2rem 0.5rem;
+    .pending-status-badge {
+      display: inline-block;
+      margin-top: 0.75rem;
+      background: #FFF3E0;
+      color: #E65100;
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.6rem;
       border-radius: var(--radius-pill);
-      background: rgba(0, 0, 0, 0.2);
-      color: #FFFFFF;
-      &.role-viewer {
-        background: var(--color-purple);
-      }
+      border: 1px solid #FFE0B2;
+    }
+    .pending-hint {
+      font-size: 0.78rem;
+      color: var(--color-text-muted);
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .full-width {
+      width: 100%;
     }
     .login-footer {
       font-size: 0.75rem;
       color: var(--color-text-muted);
-      line-height: 1.4;
+      line-height: 1.5;
       border-top: 1px solid var(--color-border-light);
       padding-top: 1.25rem;
+    }
+    .legal-link {
+      color: var(--color-blue);
+      text-decoration: underline;
+      font-weight: 600;
+      &:hover {
+        color: #0077C7;
+      }
     }
   `]
 })
@@ -204,6 +241,7 @@ export class LoginComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   isLoading = signal(false);
+  pendingUser = signal<{ nome: string; email: string } | null>(null);
   private readonly GOOGLE_CLIENT_ID = '270889581394-8snua48fsgd0t7fbfbhstrh2jfbjho14.apps.googleusercontent.com';
 
   ngOnInit() {
@@ -234,12 +272,11 @@ export class LoginComponent implements OnInit {
           shape: 'rectangular',
           text: 'signin_with',
           logo_alignment: 'left',
-          width: 380,
+          width: 360,
           locale: 'pt-BR'
         });
       }
     } else {
-      // Se o script do Google demorar para carregar, tenta novamente após 500ms
       setTimeout(() => this.initGoogleAuth(), 500);
     }
   }
@@ -260,35 +297,28 @@ export class LoginComponent implements OnInit {
       },
       error: (err) => {
         this.isLoading.set(false);
-        this.toast.error(err.error?.message || 'Falha ao autenticar com o Google.');
+        const errObj = err.error || {};
+
+        if (errObj.error === 'PENDENTE' || (errObj.message && errObj.message.includes('aguardando aprovação'))) {
+          this.pendingUser.set({
+            nome: errObj.nome || 'Membro',
+            email: errObj.email || 'sua conta'
+          });
+          this.toast.warning('Sua solicitação de acesso foi registrada e aguarda aprovação da liderança.');
+        } else if (errObj.error === 'REJEITADO') {
+          this.toast.error('Sua solicitação de acesso foi recusada.');
+        } else if (errObj.error === 'BLOQUEADO') {
+          this.toast.error('Sua conta foi desativada. Entre em contato com a organização.');
+        } else {
+          this.toast.error(errObj.message || 'Falha ao autenticar com o Google.');
+        }
       }
     });
   }
 
-  loginWithGooglePrompt() {
-    if (typeof google !== 'undefined' && google.accounts?.id) {
-      google.accounts.id.prompt();
-    } else {
-      this.quickLogin('admin@studentbuilder.aws', 'Admin Student Builder');
-    }
-  }
-
-  quickLogin(email: string, name: string) {
-    this.isLoading.set(true);
-    const devToken = `dev-token:${email}:${name}`;
-
-    this.authService.loginWithGoogle(devToken).subscribe({
-      next: (res) => {
-        this.isLoading.set(false);
-        this.toast.success(`Bem-vindo, ${res.nome}!`);
-        const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
-        this.router.navigateByUrl(returnUrl);
-      },
-      error: (err) => {
-        this.isLoading.set(false);
-        this.toast.error(err.error?.message || 'Falha ao autenticar.');
-      }
-    });
+  resetPending() {
+    this.pendingUser.set(null);
+    setTimeout(() => this.initGoogleAuth(), 100);
   }
 
   handleLogoError(event: Event) {

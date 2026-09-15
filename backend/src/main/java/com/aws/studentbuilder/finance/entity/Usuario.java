@@ -24,6 +24,10 @@ public class Usuario {
     @Column(nullable = false, length = 50)
     private PapelUsuario papel = PapelUsuario.VIEWER;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private StatusUsuario status = StatusUsuario.PENDENTE;
+
     @Column(nullable = false)
     private boolean ativo = true;
 
@@ -32,12 +36,13 @@ public class Usuario {
 
     public Usuario() {}
 
-    public Usuario(Long id, String nome, String email, String googleSub, PapelUsuario papel, boolean ativo, OffsetDateTime criadoEm) {
+    public Usuario(Long id, String nome, String email, String googleSub, PapelUsuario papel, StatusUsuario status, boolean ativo, OffsetDateTime criadoEm) {
         this.id = id;
         this.nome = nome;
         this.email = email;
         this.googleSub = googleSub;
         this.papel = papel != null ? papel : PapelUsuario.VIEWER;
+        this.status = status != null ? status : StatusUsuario.PENDENTE;
         this.ativo = ativo;
         this.criadoEm = criadoEm != null ? criadoEm : OffsetDateTime.now();
     }
@@ -52,6 +57,7 @@ public class Usuario {
         private String email;
         private String googleSub;
         private PapelUsuario papel = PapelUsuario.VIEWER;
+        private StatusUsuario status = StatusUsuario.PENDENTE;
         private boolean ativo = true;
         private OffsetDateTime criadoEm = OffsetDateTime.now();
 
@@ -60,10 +66,11 @@ public class Usuario {
         public Builder email(String email) { this.email = email; return this; }
         public Builder googleSub(String googleSub) { this.googleSub = googleSub; return this; }
         public Builder papel(PapelUsuario papel) { this.papel = papel; return this; }
+        public Builder status(StatusUsuario status) { this.status = status; return this; }
         public Builder ativo(boolean ativo) { this.ativo = ativo; return this; }
         public Builder criadoEm(OffsetDateTime criadoEm) { this.criadoEm = criadoEm; return this; }
         public Usuario build() {
-            return new Usuario(id, nome, email, googleSub, papel, ativo, criadoEm);
+            return new Usuario(id, nome, email, googleSub, papel, status, ativo, criadoEm);
         }
     }
 
@@ -77,6 +84,8 @@ public class Usuario {
     public void setGoogleSub(String googleSub) { this.googleSub = googleSub; }
     public PapelUsuario getPapel() { return papel; }
     public void setPapel(PapelUsuario papel) { this.papel = papel; }
+    public StatusUsuario getStatus() { return status; }
+    public void setStatus(StatusUsuario status) { this.status = status; }
     public boolean isAtivo() { return ativo; }
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
     public OffsetDateTime getCriadoEm() { return criadoEm; }

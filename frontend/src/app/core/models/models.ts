@@ -1,4 +1,5 @@
 export type PapelUsuario = 'ADMIN' | 'VIEWER';
+export type StatusUsuario = 'PENDENTE' | 'APROVADO' | 'REJEITADO' | 'BLOQUEADO';
 export type StatusEvento = 'PLANEJADO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO';
 export type TipoParceria = 'FINANCEIRA' | 'BRINDE' | 'PERMUTA' | 'APOIO_INSTITUCIONAL';
 export type StatusParceria = 'NEGOCIACAO' | 'FECHADO' | 'ENTREGUE' | 'CANCELADO';
@@ -8,6 +9,7 @@ export interface Usuario {
   nome: string;
   email: string;
   papel: PapelUsuario;
+  status?: StatusUsuario;
   ativo: boolean;
   criadoEm?: string;
 }

@@ -4,7 +4,10 @@ import com.aws.studentbuilder.finance.dto.AuthRequest;
 import com.aws.studentbuilder.finance.dto.AuthResponse;
 import com.aws.studentbuilder.finance.dto.UsuarioDTO;
 import com.aws.studentbuilder.finance.entity.PapelUsuario;
+import com.aws.studentbuilder.finance.entity.StatusUsuario;
 import com.aws.studentbuilder.finance.entity.Usuario;
+import com.aws.studentbuilder.finance.exception.UserAccessDeniedException;
+import com.aws.studentbuilder.finance.exception.UserPendingApprovalException;
 import com.aws.studentbuilder.finance.repository.UsuarioRepository;
 import com.aws.studentbuilder.finance.security.GoogleTokenVerifier;
 import com.aws.studentbuilder.finance.security.JwtTokenProvider;
@@ -53,20 +56,37 @@ public class AuthService {
                     return usuarioRepository.save(existing);
                 })
                 .orElseGet(() -> {
-                    boolean isAdmin = initialAdminEmail.equalsIgnoreCase(googleUser.email());
+                    boolean isFirstUser = usuarioRepository.count() == 0;
+                    boolean isConfiguredAdmin = initialAdminEmail != null && initialAdminEmail.equalsIgnoreCase(googleUser.email());
+                    boolean isAutoApprovedAdmin = isFirstUser || isConfiguredAdmin;
+
                     Usuario novo = Usuario.builder()
                             .nome(googleUser.name())
                             .email(googleUser.email())
                             .googleSub(googleUser.sub())
-                            .papel(isAdmin ? PapelUsuario.ADMIN : PapelUsuario.VIEWER)
-                            .ativo(true)
+                            .papel(isAutoApprovedAdmin ? PapelUsuario.ADMIN : PapelUsuario.VIEWER)
+                            .status(isAutoApprovedAdmin ? StatusUsuario.APROVADO : StatusUsuario.PENDENTE)
+                            .ativo(isAutoApprovedAdmin)
                             .build();
-                    logger.info("Criando novo usuário: {} com papel: {}", novo.getEmail(), novo.getPapel());
+
+                    logger.info("Novo registro de usuário: {} | Papel: {} | Status: {}", novo.getEmail(), novo.getPapel(), novo.getStatus());
                     return usuarioRepository.save(novo);
                 });
 
-        if (!usuario.isAtivo()) {
-            throw new IllegalStateException("Esta conta está desativada. Entre em contato com a liderança do grupo.");
+        // Verificação do status de aprovação
+        if (usuario.getStatus() == StatusUsuario.PENDENTE) {
+            logger.warn("Tentativa de login de usuário pendente de aprovação: {}", usuario.getEmail());
+            throw new UserPendingApprovalException(usuario.getEmail(), usuario.getNome());
+        }
+
+        if (usuario.getStatus() == StatusUsuario.REJEITADO) {
+            logger.warn("Tentativa de login de usuário rejeitado: {}", usuario.getEmail());
+            throw new UserAccessDeniedException(StatusUsuario.REJEITADO, "Sua solicitação de acesso foi recusada pela administração.");
+        }
+
+        if (usuario.getStatus() == StatusUsuario.BLOQUEADO || !usuario.isAtivo()) {
+            logger.warn("Tentativa de login de usuário inativo ou bloqueado: {}", usuario.getEmail());
+            throw new UserAccessDeniedException(StatusUsuario.BLOQUEADO, "Esta conta está desativada. Entre em contato com a liderança do grupo.");
         }
 
         UserPrincipal principal = UserPrincipal.create(usuario);
@@ -89,6 +109,7 @@ public class AuthService {
                 .nome(usuario.getNome())
                 .email(usuario.getEmail())
                 .papel(usuario.getPapel())
+                .status(usuario.getStatus())
                 .ativo(usuario.isAtivo())
                 .criadoEm(usuario.getCriadoEm())
                 .build();

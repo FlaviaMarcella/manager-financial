@@ -1,0 +1,4 @@
+ALTER TABLE usuarios 
+ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'APROVADO';
+
+CREATE INDEX IF NOT EXISTS idx_usuarios_status ON usuarios(status);

@@ -17,18 +17,23 @@ public class GoogleTokenVerifier {
     private static final Logger logger = LoggerFactory.getLogger(GoogleTokenVerifier.class);
 
     private final String clientId;
+    private final boolean allowDevTokens;
     private final GoogleIdTokenVerifier verifier;
 
-    public GoogleTokenVerifier(@Value("${app.google.client-id}") String clientId) {
+    public GoogleTokenVerifier(
+            @Value("${app.google.client-id}") String clientId,
+            @Value("${app.auth.allow-dev-tokens:false}") boolean allowDevTokens
+    ) {
         this.clientId = clientId;
+        this.allowDevTokens = allowDevTokens;
         this.verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance())
                 .setAudience(Collections.singletonList(clientId))
                 .build();
     }
 
     public GoogleUserInfo verify(String idTokenString) {
-        // Modo de desenvolvimento / fallback para testes rápidos
-        if (idTokenString != null && (idTokenString.startsWith("dev-token:") || "dummy-google-client-id.apps.googleusercontent.com".equals(clientId))) {
+        // Modo de desenvolvimento apenas se explicitamente habilitado
+        if (allowDevTokens && idTokenString != null && (idTokenString.startsWith("dev-token:") || "dummy-google-client-id.apps.googleusercontent.com".equals(clientId))) {
             return parseDevToken(idTokenString);
         }
 

@@ -19,6 +19,28 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(com.aws.studentbuilder.finance.exception.UserPendingApprovalException.class)
+    public ResponseEntity<Map<String, Object>> handleUserPending(com.aws.studentbuilder.finance.exception.UserPendingApprovalException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", OffsetDateTime.now());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        body.put("error", "PENDENTE");
+        body.put("nome", ex.getNome());
+        body.put("email", ex.getEmail());
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    @ExceptionHandler(com.aws.studentbuilder.finance.exception.UserAccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleUserAccessDenied(com.aws.studentbuilder.finance.exception.UserAccessDeniedException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", OffsetDateTime.now());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        body.put("error", ex.getStatus().name());
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         Map<String, Object> body = new HashMap<>();

@@ -202,6 +202,18 @@ export class ApiService {
     return this.http.patch<Usuario>(`${this.baseUrl}/usuarios/${id}`, { papel, ativo });
   }
 
+  updateUsuario(id: number, data: { papel?: 'ADMIN' | 'VIEWER'; status?: string; ativo?: boolean }): Observable<Usuario> {
+    return this.http.patch<Usuario>(`${this.baseUrl}/usuarios/${id}`, data);
+  }
+
+  aprovarUsuario(id: number, papel: 'ADMIN' | 'VIEWER' = 'VIEWER'): Observable<Usuario> {
+    return this.http.patch<Usuario>(`${this.baseUrl}/usuarios/${id}/aprovar?papel=${papel}`, {});
+  }
+
+  rejeitarUsuario(id: number): Observable<Usuario> {
+    return this.http.patch<Usuario>(`${this.baseUrl}/usuarios/${id}/rejeitar`, {});
+  }
+
   // Relatórios & Prestação de Contas
   getRelatorioEvento(eventoId: number): Observable<RelatorioEvento> {
     return this.http.get<RelatorioEvento>(`${this.baseUrl}/relatorios/eventos/${eventoId}`);

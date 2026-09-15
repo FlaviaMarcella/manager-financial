@@ -46,4 +46,21 @@ public class UsuarioController {
     ) {
         return ResponseEntity.ok(usuarioService.atualizarPapelEStatus(id, request));
     }
+
+    @PatchMapping("/{id}/aprovar")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Aprovar solicitação de acesso de usuário (apenas ADMIN)")
+    public ResponseEntity<UsuarioDTO> aprovar(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "VIEWER") com.aws.studentbuilder.finance.entity.PapelUsuario papel
+    ) {
+        return ResponseEntity.ok(usuarioService.aprovarUsuario(id, papel));
+    }
+
+    @PatchMapping("/{id}/rejeitar")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Rejeitar solicitação de acesso de usuário (apenas ADMIN)")
+    public ResponseEntity<UsuarioDTO> rejeitar(@PathVariable Long id) {
+        return ResponseEntity.ok(usuarioService.rejeitarUsuario(id));
+    }
 }

@@ -19,6 +19,8 @@ app:
   google:
     client-id: dummy-google-client-id.apps.googleusercontent.com
   initial-admin-email: admin@studentbuilder.aws
+  auth:
+    allow-dev-tokens: true
   storage:
     type: local
     local-dir: ./target/test-uploads
