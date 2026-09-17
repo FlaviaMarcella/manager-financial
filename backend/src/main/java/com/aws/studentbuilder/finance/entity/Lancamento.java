@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "lancamentos")
@@ -59,6 +61,9 @@ public class Lancamento {
     @Column(name = "anexo_nome_original")
     private String anexoNomeOriginal;
 
+    @OneToMany(mappedBy = "lancamento", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<LancamentoAnexo> anexos = new ArrayList<>();
+
     @Column(columnDefinition = "TEXT")
     private String observacoes;
 
@@ -70,8 +75,8 @@ public class Lancamento {
     public Lancamento(Long id, LocalDate data, String descricao, String fornecedor, String numeroNotaFiscal,
                       Evento evento, Categoria categoria, BigDecimal valorUsd, BigDecimal valorBrl,
                       BigDecimal taxaCambioUsada, String formaPagamento, StatusFinanceiro status,
-                      Usuario responsavel, String anexoUrl, String anexoNomeOriginal, String observacoes,
-                      OffsetDateTime criadoEm) {
+                      Usuario responsavel, String anexoUrl, String anexoNomeOriginal,
+                      List<LancamentoAnexo> anexos, String observacoes, OffsetDateTime criadoEm) {
         this.id = id;
         this.data = data;
         this.descricao = descricao;
@@ -87,6 +92,7 @@ public class Lancamento {
         this.responsavel = responsavel;
         this.anexoUrl = anexoUrl;
         this.anexoNomeOriginal = anexoNomeOriginal;
+        if (anexos != null) this.anexos = anexos;
         this.observacoes = observacoes;
         this.criadoEm = criadoEm != null ? criadoEm : OffsetDateTime.now();
     }
@@ -109,6 +115,7 @@ public class Lancamento {
         private Usuario responsavel;
         private String anexoUrl;
         private String anexoNomeOriginal;
+        private List<LancamentoAnexo> anexos = new ArrayList<>();
         private String observacoes;
         private OffsetDateTime criadoEm = OffsetDateTime.now();
 
@@ -127,10 +134,32 @@ public class Lancamento {
         public Builder responsavel(Usuario responsavel) { this.responsavel = responsavel; return this; }
         public Builder anexoUrl(String anexoUrl) { this.anexoUrl = anexoUrl; return this; }
         public Builder anexoNomeOriginal(String anexoNomeOriginal) { this.anexoNomeOriginal = anexoNomeOriginal; return this; }
+        public Builder anexos(List<LancamentoAnexo> anexos) { this.anexos = anexos; return this; }
         public Builder observacoes(String observacoes) { this.observacoes = observacoes; return this; }
         public Builder criadoEm(OffsetDateTime criadoEm) { this.criadoEm = criadoEm; return this; }
         public Lancamento build() {
-            return new Lancamento(id, data, descricao, fornecedor, numeroNotaFiscal, evento, categoria, valorUsd, valorBrl, taxaCambioUsada, formaPagamento, status, responsavel, anexoUrl, anexoNomeOriginal, observacoes, criadoEm);
+            return new Lancamento(id, data, descricao, fornecedor, numeroNotaFiscal, evento, categoria, valorUsd, valorBrl, taxaCambioUsada, formaPagamento, status, responsavel, anexoUrl, anexoNomeOriginal, anexos, observacoes, criadoEm);
+        }
+    }
+
+    public void addAnexo(LancamentoAnexo anexo) {
+        anexos.add(anexo);
+        anexo.setLancamento(this);
+        if (this.anexoUrl == null) {
+            this.anexoUrl = anexo.getUrl();
+            this.anexoNomeOriginal = anexo.getNomeOriginal();
+        }
+    }
+
+    public void removeAnexo(LancamentoAnexo anexo) {
+        anexos.remove(anexo);
+        anexo.setLancamento(null);
+        if (anexos.isEmpty()) {
+            this.anexoUrl = null;
+            this.anexoNomeOriginal = null;
+        } else {
+            this.anexoUrl = anexos.get(0).getUrl();
+            this.anexoNomeOriginal = anexos.get(0).getNomeOriginal();
         }
     }
 
@@ -164,6 +193,8 @@ public class Lancamento {
     public void setAnexoUrl(String anexoUrl) { this.anexoUrl = anexoUrl; }
     public String getAnexoNomeOriginal() { return anexoNomeOriginal; }
     public void setAnexoNomeOriginal(String anexoNomeOriginal) { this.anexoNomeOriginal = anexoNomeOriginal; }
+    public List<LancamentoAnexo> getAnexos() { return anexos; }
+    public void setAnexos(List<LancamentoAnexo> anexos) { this.anexos = anexos; }
     public String getObservacoes() { return observacoes; }
     public void setObservacoes(String observacoes) { this.observacoes = observacoes; }
     public OffsetDateTime getCriadoEm() { return criadoEm; }

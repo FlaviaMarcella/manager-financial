@@ -1,17 +1,10 @@
 package com.aws.studentbuilder.finance.service;
 
+import com.aws.studentbuilder.finance.dto.LancamentoAnexoDTO;
 import com.aws.studentbuilder.finance.dto.LancamentoDTO;
 import com.aws.studentbuilder.finance.dto.LancamentoRequest;
-import com.aws.studentbuilder.finance.entity.Categoria;
-import com.aws.studentbuilder.finance.entity.Evento;
-import com.aws.studentbuilder.finance.entity.Lancamento;
-import com.aws.studentbuilder.finance.entity.StatusFinanceiro;
-import com.aws.studentbuilder.finance.entity.Usuario;
-import com.aws.studentbuilder.finance.repository.CategoriaRepository;
-import com.aws.studentbuilder.finance.repository.EventoRepository;
-import com.aws.studentbuilder.finance.repository.LancamentoRepository;
-import com.aws.studentbuilder.finance.repository.StatusFinanceiroRepository;
-import com.aws.studentbuilder.finance.repository.UsuarioRepository;
+import com.aws.studentbuilder.finance.entity.*;
+import com.aws.studentbuilder.finance.repository.*;
 import com.aws.studentbuilder.finance.security.SecurityUtils;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.core.io.Resource;
@@ -31,6 +24,7 @@ import java.util.List;
 public class LancamentoService {
 
     private final LancamentoRepository lancamentoRepository;
+    private final LancamentoAnexoRepository lancamentoAnexoRepository;
     private final EventoRepository eventoRepository;
     private final CategoriaRepository categoriaRepository;
     private final StatusFinanceiroRepository statusFinanceiroRepository;
@@ -39,6 +33,7 @@ public class LancamentoService {
     private final StorageService storageService;
 
     public LancamentoService(LancamentoRepository lancamentoRepository,
+                             LancamentoAnexoRepository lancamentoAnexoRepository,
                              EventoRepository eventoRepository,
                              CategoriaRepository categoriaRepository,
                              StatusFinanceiroRepository statusFinanceiroRepository,
@@ -46,6 +41,7 @@ public class LancamentoService {
                              ConfigService configService,
                              StorageService storageService) {
         this.lancamentoRepository = lancamentoRepository;
+        this.lancamentoAnexoRepository = lancamentoAnexoRepository;
         this.eventoRepository = eventoRepository;
         this.categoriaRepository = categoriaRepository;
         this.statusFinanceiroRepository = statusFinanceiroRepository;
@@ -227,19 +223,32 @@ public class LancamentoService {
     }
 
     @Transactional
-    public LancamentoDTO vincularAnexo(Long id, MultipartFile file) {
+    public LancamentoDTO vincularAnexos(Long id, List<MultipartFile> files) {
         Lancamento lancamento = lancamentoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Lançamento não encontrado com ID: " + id));
 
-        if (lancamento.getAnexoUrl() != null) {
-            storageService.delete(lancamento.getAnexoUrl());
+        if (files != null && !files.isEmpty()) {
+            for (MultipartFile file : files) {
+                if (file != null && !file.isEmpty()) {
+                    String storedFilename = storageService.store(file);
+                    LancamentoAnexo anexo = LancamentoAnexo.builder()
+                            .lancamento(lancamento)
+                            .url(storedFilename)
+                            .nomeOriginal(file.getOriginalFilename() != null ? file.getOriginalFilename() : "comprovante")
+                            .tamanhoBytes(file.getSize())
+                            .contentType(file.getContentType())
+                            .build();
+                    lancamento.addAnexo(anexo);
+                }
+            }
         }
 
-        String storedFilename = storageService.store(file);
-        lancamento.setAnexoUrl(storedFilename);
-        lancamento.setAnexoNomeOriginal(file.getOriginalFilename());
-
         return toDTO(lancamentoRepository.save(lancamento));
+    }
+
+    @Transactional
+    public LancamentoDTO vincularAnexo(Long id, MultipartFile file) {
+        return vincularAnexos(id, List.of(file));
     }
 
     @Transactional
@@ -247,14 +256,34 @@ public class LancamentoService {
         Lancamento lancamento = lancamentoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Lançamento não encontrado com ID: " + id));
 
+        for (LancamentoAnexo anexo : new ArrayList<>(lancamento.getAnexos())) {
+            storageService.delete(anexo.getUrl());
+            lancamento.removeAnexo(anexo);
+        }
+
         if (lancamento.getAnexoUrl() != null) {
             storageService.delete(lancamento.getAnexoUrl());
             lancamento.setAnexoUrl(null);
             lancamento.setAnexoNomeOriginal(null);
-            lancamento = lancamentoRepository.save(lancamento);
         }
 
-        return toDTO(lancamento);
+        return toDTO(lancamentoRepository.save(lancamento));
+    }
+
+    @Transactional
+    public LancamentoDTO removerAnexoEspecifico(Long lancamentoId, Long anexoId) {
+        Lancamento lancamento = lancamentoRepository.findById(lancamentoId)
+                .orElseThrow(() -> new IllegalArgumentException("Lançamento não encontrado com ID: " + lancamentoId));
+
+        LancamentoAnexo anexoParaRemover = lancamento.getAnexos().stream()
+                .filter(a -> a.getId().equals(anexoId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Anexo não encontrado com ID: " + anexoId));
+
+        storageService.delete(anexoParaRemover.getUrl());
+        lancamento.removeAnexo(anexoParaRemover);
+
+        return toDTO(lancamentoRepository.save(lancamento));
     }
 
     @Transactional(readOnly = true)
@@ -262,17 +291,42 @@ public class LancamentoService {
         Lancamento lancamento = lancamentoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Lançamento não encontrado com ID: " + id));
 
-        if (lancamento.getAnexoUrl() == null) {
-            throw new IllegalArgumentException("Lançamento não possui anexo.");
+        if (!lancamento.getAnexos().isEmpty()) {
+            return storageService.loadAsResource(lancamento.getAnexos().get(0).getUrl());
+        } else if (lancamento.getAnexoUrl() != null) {
+            return storageService.loadAsResource(lancamento.getAnexoUrl());
         }
 
-        return storageService.loadAsResource(lancamento.getAnexoUrl());
+        throw new IllegalArgumentException("Lançamento não possui anexo.");
+    }
+
+    @Transactional(readOnly = true)
+    public Resource carregarAnexoEspecifico(Long lancamentoId, Long anexoId) {
+        LancamentoAnexo anexo = lancamentoAnexoRepository.findById(anexoId)
+                .orElseThrow(() -> new IllegalArgumentException("Anexo não encontrado com ID: " + anexoId));
+
+        if (!anexo.getLancamento().getId().equals(lancamentoId)) {
+            throw new IllegalArgumentException("O anexo especificado não pertence ao lançamento informado.");
+        }
+
+        return storageService.loadAsResource(anexo.getUrl());
+    }
+
+    @Transactional(readOnly = true)
+    public LancamentoAnexoDTO buscarAnexoPorId(Long anexoId) {
+        LancamentoAnexo anexo = lancamentoAnexoRepository.findById(anexoId)
+                .orElseThrow(() -> new IllegalArgumentException("Anexo não encontrado com ID: " + anexoId));
+        return toAnexoDTO(anexo);
     }
 
     @Transactional
     public void deletar(Long id) {
         Lancamento lancamento = lancamentoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Lançamento não encontrado com ID: " + id));
+
+        for (LancamentoAnexo anexo : lancamento.getAnexos()) {
+            storageService.delete(anexo.getUrl());
+        }
 
         if (lancamento.getAnexoUrl() != null) {
             storageService.delete(lancamento.getAnexoUrl());
@@ -282,6 +336,13 @@ public class LancamentoService {
     }
 
     public LancamentoDTO toDTO(Lancamento l) {
+        List<LancamentoAnexoDTO> anexosDTO = l.getAnexos().stream()
+                .map(this::toAnexoDTO)
+                .toList();
+
+        String principalUrl = !l.getAnexos().isEmpty() ? l.getAnexos().get(0).getUrl() : l.getAnexoUrl();
+        String principalNome = !l.getAnexos().isEmpty() ? l.getAnexos().get(0).getNomeOriginal() : l.getAnexoNomeOriginal();
+
         return LancamentoDTO.builder()
                 .id(l.getId())
                 .data(l.getData())
@@ -301,10 +362,23 @@ public class LancamentoService {
                 .statusCorBadge(l.getStatus() != null ? l.getStatus().getCorBadge() : "#888888")
                 .responsavelId(l.getResponsavel() != null ? l.getResponsavel().getId() : null)
                 .responsavelNome(l.getResponsavel() != null ? l.getResponsavel().getNome() : "Não atribuído")
-                .anexoUrl(l.getAnexoUrl())
-                .anexoNomeOriginal(l.getAnexoNomeOriginal())
+                .anexoUrl(principalUrl)
+                .anexoNomeOriginal(principalNome)
+                .anexos(anexosDTO)
                 .observacoes(l.getObservacoes())
                 .criadoEm(l.getCriadoEm())
+                .build();
+    }
+
+    public LancamentoAnexoDTO toAnexoDTO(LancamentoAnexo a) {
+        return LancamentoAnexoDTO.builder()
+                .id(a.getId())
+                .lancamentoId(a.getLancamento().getId())
+                .url(a.getUrl())
+                .nomeOriginal(a.getNomeOriginal())
+                .tamanhoBytes(a.getTamanhoBytes())
+                .contentType(a.getContentType())
+                .criadoEm(a.getCriadoEm())
                 .build();
     }
 }

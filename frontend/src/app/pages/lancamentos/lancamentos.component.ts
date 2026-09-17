@@ -145,7 +145,11 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                     <span class="status-pill" [style.background-color]="item.statusCorBadge + '22'" [style.color]="item.statusCorBadge" [style.border-color]="item.statusCorBadge + '55'">
                       {{ item.statusNome }}
                     </span>
-                    @if (item.anexoUrl) {
+                    @if (item.anexos && item.anexos.length > 0) {
+                      <button class="btn-anexo" (click)="openDetailsModal(item)" title="Ver Comprovantes">
+                        📎 {{ item.anexos.length }} {{ item.anexos.length === 1 ? 'Anexo' : 'Anexos' }}
+                      </button>
+                    } @else if (item.anexoUrl) {
                       <button class="btn-anexo" (click)="downloadAnexo(item)" title="Ver Anexo / NF">
                         📎 Ver NF
                       </button>
@@ -179,7 +183,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
         </table>
       </div>
 
-      <!-- Modal de Criação / Edição com Cálculo Inteligente de Taxas -->
+      <!-- Modal de Criação / Edição com Múltiplos Anexos e Cálculo Inteligente -->
       @if (showModal()) {
         <div class="modal-backdrop" (click)="closeModal()">
           <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
@@ -325,11 +329,39 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                   </div>
                 </div>
 
+                <!-- Upload de Múltiplos Anexos / Notas Fiscais -->
                 <div class="form-group">
-                  <label class="form-label">Anexo (Nota Fiscal / Comprovante PDF ou Imagem):</label>
-                  <input type="file" class="form-control" (change)="onFileSelected($event)" accept=".pdf,.png,.jpg,.jpeg">
-                  @if (selectedFileName) {
-                    <small class="file-hint">Arquivo selecionado: <strong>{{ selectedFileName }}</strong></small>
+                  <label class="form-label">Anexar Notas Fiscais / Comprovantes (Múltiplos Arquivos):</label>
+                  <input type="file" multiple class="form-control" (change)="onFilesSelected($event)" accept=".pdf,.png,.jpg,.jpeg">
+                  
+                  <!-- Lista de novos arquivos selecionados para upload -->
+                  @if (selectedFiles.length > 0) {
+                    <div class="selected-files-list">
+                      <div class="files-header">Arquivos selecionados para envio ({{ selectedFiles.length }}):</div>
+                      @for (file of selectedFiles; track file.name; let i = $index) {
+                        <div class="file-chip">
+                          <span class="file-chip-name">📄 {{ file.name }} ({{ formatBytes(file.size) }})</span>
+                          <button type="button" class="btn-chip-remove" (click)="removeSelectedFile(i)" title="Remover este arquivo">✕</button>
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <!-- Anexos já salvos (Modo Edição) -->
+                  @if (formData.anexos && formData.anexos.length > 0) {
+                    <div class="existing-anexos-list">
+                      <div class="files-header">Anexos já cadastrados:</div>
+                      @for (anx of formData.anexos; track anx.id) {
+                        <div class="existing-anexo-item">
+                          <a [href]="anx.url" target="_blank" class="anexo-link">
+                            📎 {{ anx.nomeOriginal }}
+                          </a>
+                          <button type="button" class="btn-remove-anexo" (click)="removerAnexoExistente(anx.id!)" title="Excluir este anexo">
+                            🗑️
+                          </button>
+                        </div>
+                      }
+                    </div>
                   }
                 </div>
 
@@ -350,7 +382,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
         </div>
       }
 
-      <!-- Modal de Detalhes Completos (Eye Icon) -->
+      <!-- Modal de Detalhes Completos (Eye Icon) com Lista de Todos os Comprovantes -->
       @if (selectedLancamento()) {
         <div class="modal-backdrop" (click)="closeDetailsModal()">
           <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
@@ -451,7 +483,27 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                 </div>
               }
 
-              @if (selectedLancamento()!.anexoUrl) {
+              <!-- Lista de Comprovantes / Notas Fiscais no Modal de Detalhes -->
+              @if (selectedLancamento()!.anexos && selectedLancamento()!.anexos!.length > 0) {
+                <div class="details-section">
+                  <h4 class="section-title">Comprovantes & Notas Fiscais ({{ selectedLancamento()!.anexos!.length }})</h4>
+                  <div class="anexos-grid">
+                    @for (anx of selectedLancamento()!.anexos; track anx.id) {
+                      <div class="anexo-box">
+                        <div class="anexo-info">
+                          <strong>📄 {{ anx.nomeOriginal }}</strong>
+                          @if (anx.tamanhoBytes) {
+                            <small class="text-muted">{{ formatBytes(anx.tamanhoBytes) }}</small>
+                          }
+                        </div>
+                        <a [href]="anx.url" target="_blank" class="btn btn-sm btn-primary">
+                          Visualizar / Baixar
+                        </a>
+                      </div>
+                    }
+                  </div>
+                </div>
+              } @else if (selectedLancamento()!.anexoUrl) {
                 <div class="details-section">
                   <h4 class="section-title">Comprovante / Nota Fiscal</h4>
                   <div class="anexo-box">
@@ -749,6 +801,71 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .text-amber { color: #D97706 !important; }
     .text-warning { color: #DC2626 !important; }
 
+    /* Estilos de Arquivos e Múltiplos Anexos */
+    .selected-files-list, .existing-anexos-list {
+      margin-top: 0.65rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      background: #F8FAFC;
+      border: 1px dashed #CBD5E1;
+      border-radius: 6px;
+      padding: 0.6rem 0.8rem;
+    }
+    .files-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--color-navy);
+      text-transform: uppercase;
+    }
+    .file-chip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 4px;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.8rem;
+    }
+    .file-chip-name {
+      color: var(--color-navy);
+      font-weight: 500;
+    }
+    .btn-chip-remove {
+      background: none;
+      border: none;
+      color: #EF4444;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0 0.3rem;
+      &:hover { color: #DC2626; }
+    }
+    .existing-anexo-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 4px;
+      padding: 0.35rem 0.6rem;
+    }
+    .anexo-link {
+      font-size: 0.8rem;
+      color: #0284C7;
+      text-decoration: none;
+      font-weight: 600;
+      &:hover { text-decoration: underline; }
+    }
+    .btn-remove-anexo {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.1rem 0.3rem;
+      font-size: 0.85rem;
+      &:hover { opacity: 0.7; }
+    }
+
     /* Modal Details */
     .details-body {
       display: flex;
@@ -810,6 +927,11 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .highlight-amber .b-val { color: #D97706; }
     .highlight-warning .b-val { color: #DC2626; }
 
+    .anexos-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
     .anexo-box {
       display: flex;
       align-items: center;
@@ -818,6 +940,12 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       padding: 0.75rem 1rem;
       border-radius: 6px;
       border: 1px solid var(--color-border);
+    }
+    .anexo-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      strong { font-size: 0.85rem; color: var(--color-navy); }
     }
     .notes-text {
       background: #F8FAFC;
@@ -869,8 +997,7 @@ export class LancamentosComponent implements OnInit {
     formaPagamento: 'Cartão de Crédito Corporativo'
   };
 
-  selectedFile: File | null = null;
-  selectedFileName = '';
+  selectedFiles: File[] = [];
 
   ngOnInit() {
     this.loadData();
@@ -985,14 +1112,14 @@ export class LancamentosComponent implements OnInit {
         formaPagamento: 'Cartão de Crédito Corporativo'
       };
     }
-    this.selectedFile = null;
-    this.selectedFileName = '';
+    this.selectedFiles = [];
     this.showModal.set(true);
   }
 
   closeModal() {
     this.showModal.set(false);
     this.editingId.set(null);
+    this.selectedFiles = [];
   }
 
   openDetailsModal(item: Lancamento) {
@@ -1003,12 +1130,46 @@ export class LancamentosComponent implements OnInit {
     this.selectedLancamento.set(null);
   }
 
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.selectedFile = file;
-      this.selectedFileName = file.name;
+  onFilesSelected(event: any) {
+    const fileList: FileList = event.target.files;
+    if (fileList && fileList.length > 0) {
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        // Evita duplicados na seleção
+        if (!this.selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+          this.selectedFiles.push(file);
+        }
+      }
     }
+    event.target.value = '';
+  }
+
+  removeSelectedFile(index: number) {
+    this.selectedFiles.splice(index, 1);
+  }
+
+  removerAnexoExistente(anexoId: number) {
+    if (!this.editingId()) return;
+    if (confirm('Deseja excluir este anexo permanentemente?')) {
+      this.api.deleteAnexoLancamento(this.editingId()!, anexoId).subscribe({
+        next: () => {
+          this.toast.success('Anexo excluído com sucesso.');
+          if (this.formData.anexos) {
+            this.formData.anexos = this.formData.anexos.filter(a => a.id !== anexoId);
+          }
+          this.loadData();
+        },
+        error: () => this.toast.error('Erro ao excluir anexo.')
+      });
+    }
+  }
+
+  formatBytes(bytes?: number): string {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
   salvar() {
@@ -1034,16 +1195,16 @@ export class LancamentosComponent implements OnInit {
 
     action.subscribe({
       next: (res) => {
-        if (this.selectedFile && res.id) {
-          this.api.uploadAnexoLancamento(res.id, this.selectedFile).subscribe({
+        if (this.selectedFiles.length > 0 && res.id) {
+          this.api.uploadMultiplosAnexosLancamento(res.id, this.selectedFiles).subscribe({
             next: () => {
-              this.toast.success('Lançamento e anexo salvos com sucesso!');
+              this.toast.success('Lançamento e comprovantes salvos com sucesso!');
               this.loadData();
               this.closeModal();
               this.saving.set(false);
             },
             error: () => {
-              this.toast.warning('Lançamento salvo, mas erro ao enviar anexo.');
+              this.toast.warning('Lançamento salvo, mas erro ao enviar anexos.');
               this.loadData();
               this.closeModal();
               this.saving.set(false);

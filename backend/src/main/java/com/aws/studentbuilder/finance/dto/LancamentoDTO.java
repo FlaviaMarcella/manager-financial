@@ -3,6 +3,8 @@ package com.aws.studentbuilder.finance.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LancamentoDTO {
     private Long id;
@@ -25,6 +27,7 @@ public class LancamentoDTO {
     private String responsavelNome;
     private String anexoUrl;
     private String anexoNomeOriginal;
+    private List<LancamentoAnexoDTO> anexos = new ArrayList<>();
     private String observacoes;
     private OffsetDateTime criadoEm;
 
@@ -35,7 +38,7 @@ public class LancamentoDTO {
                          BigDecimal valorUsd, BigDecimal valorBrl, BigDecimal taxaCambioUsada,
                          String formaPagamento, Long statusId, String statusNome, String statusCorBadge,
                          Long responsavelId, String responsavelNome, String anexoUrl,
-                         String anexoNomeOriginal, String observacoes, OffsetDateTime criadoEm) {
+                         String anexoNomeOriginal, List<LancamentoAnexoDTO> anexos, String observacoes, OffsetDateTime criadoEm) {
         this.id = id;
         this.data = data;
         this.descricao = descricao;
@@ -56,6 +59,7 @@ public class LancamentoDTO {
         this.responsavelNome = responsavelNome;
         this.anexoUrl = anexoUrl;
         this.anexoNomeOriginal = anexoNomeOriginal;
+        if (anexos != null) this.anexos = anexos;
         this.observacoes = observacoes;
         this.criadoEm = criadoEm;
     }
@@ -83,6 +87,7 @@ public class LancamentoDTO {
         private String responsavelNome;
         private String anexoUrl;
         private String anexoNomeOriginal;
+        private List<LancamentoAnexoDTO> anexos = new ArrayList<>();
         private String observacoes;
         private OffsetDateTime criadoEm;
 
@@ -106,10 +111,11 @@ public class LancamentoDTO {
         public Builder responsavelNome(String responsavelNome) { this.responsavelNome = responsavelNome; return this; }
         public Builder anexoUrl(String anexoUrl) { this.anexoUrl = anexoUrl; return this; }
         public Builder anexoNomeOriginal(String anexoNomeOriginal) { this.anexoNomeOriginal = anexoNomeOriginal; return this; }
+        public Builder anexos(List<LancamentoAnexoDTO> anexos) { this.anexos = anexos; return this; }
         public Builder observacoes(String observacoes) { this.observacoes = observacoes; return this; }
         public Builder criadoEm(OffsetDateTime criadoEm) { this.criadoEm = criadoEm; return this; }
         public LancamentoDTO build() {
-            return new LancamentoDTO(id, data, descricao, fornecedor, numeroNotaFiscal, eventoId, eventoNome, categoriaId, categoriaNome, valorUsd, valorBrl, taxaCambioUsada, formaPagamento, statusId, statusNome, statusCorBadge, responsavelId, responsavelNome, anexoUrl, anexoNomeOriginal, observacoes, criadoEm);
+            return new LancamentoDTO(id, data, descricao, fornecedor, numeroNotaFiscal, eventoId, eventoNome, categoriaId, categoriaNome, valorUsd, valorBrl, taxaCambioUsada, formaPagamento, statusId, statusNome, statusCorBadge, responsavelId, responsavelNome, anexoUrl, anexoNomeOriginal, anexos, observacoes, criadoEm);
         }
     }
 
@@ -153,6 +159,8 @@ public class LancamentoDTO {
     public void setAnexoUrl(String anexoUrl) { this.anexoUrl = anexoUrl; }
     public String getAnexoNomeOriginal() { return anexoNomeOriginal; }
     public void setAnexoNomeOriginal(String anexoNomeOriginal) { this.anexoNomeOriginal = anexoNomeOriginal; }
+    public List<LancamentoAnexoDTO> getAnexos() { return anexos; }
+    public void setAnexos(List<LancamentoAnexoDTO> anexos) { this.anexos = anexos; }
     public String getObservacoes() { return observacoes; }
     public void setObservacoes(String observacoes) { this.observacoes = observacoes; }
     public OffsetDateTime getCriadoEm() { return criadoEm; }

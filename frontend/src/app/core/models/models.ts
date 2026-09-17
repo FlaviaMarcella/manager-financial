@@ -69,6 +69,16 @@ export interface ItemOrcamento {
   criadoEm?: string;
 }
 
+export interface LancamentoAnexo {
+  id?: number;
+  lancamentoId?: number;
+  url: string;
+  nomeOriginal: string;
+  tamanhoBytes?: number;
+  contentType?: string;
+  criadoEm?: string;
+}
+
 export interface Lancamento {
   id?: number;
   data: string;
@@ -90,6 +100,7 @@ export interface Lancamento {
   responsavelNome?: string;
   anexoUrl?: string;
   anexoNomeOriginal?: string;
+  anexos?: LancamentoAnexo[];
   observacoes?: string;
   criadoEm?: string;
 }

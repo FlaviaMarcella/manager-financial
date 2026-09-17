@@ -3,6 +3,7 @@ package com.aws.studentbuilder.finance.service;
 import com.aws.studentbuilder.finance.dto.*;
 import com.aws.studentbuilder.finance.entity.Evento;
 import com.aws.studentbuilder.finance.entity.Lancamento;
+import com.aws.studentbuilder.finance.entity.LancamentoAnexo;
 import com.aws.studentbuilder.finance.repository.EventoRepository;
 import com.aws.studentbuilder.finance.repository.LancamentoRepository;
 import org.slf4j.Logger;
@@ -23,6 +24,7 @@ import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -44,7 +46,7 @@ public class RelatorioService {
     private final ParceriaService parceriaService;
     private final BrindeService brindeService;
     private final StorageService storageService;
-    private final ConfigService configService;
+    private final PdfRelatorioService pdfRelatorioService;
 
     public RelatorioService(
             EventoRepository eventoRepository,
@@ -54,7 +56,7 @@ public class RelatorioService {
             ParceriaService parceriaService,
             BrindeService brindeService,
             StorageService storageService,
-            ConfigService configService
+            PdfRelatorioService pdfRelatorioService
     ) {
         this.eventoRepository = eventoRepository;
         this.orcamentoService = orcamentoService;
@@ -63,7 +65,7 @@ public class RelatorioService {
         this.parceriaService = parceriaService;
         this.brindeService = brindeService;
         this.storageService = storageService;
-        this.configService = configService;
+        this.pdfRelatorioService = pdfRelatorioService;
     }
 
     @Transactional(readOnly = true)
@@ -77,33 +79,37 @@ public class RelatorioService {
         List<BrindeDTO> brindes = brindeService.listar(eventoId, null);
 
         BigDecimal totalOrcadoUsd = itensOrcamento.stream()
-                .map(ItemOrcamentoDTO::getValorOrcadoUsd)
+                .map(i -> i.getValorOrcadoUsd() != null ? i.getValorOrcadoUsd() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalOrcadoBrl = itensOrcamento.stream()
-                .map(ItemOrcamentoDTO::getValorOrcadoBrl)
+                .map(i -> i.getValorOrcadoBrl() != null ? i.getValorOrcadoBrl() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalRealizadoBrl = lancamentos.stream()
-                .map(LancamentoDTO::getValorBrl)
+                .map(l -> l.getValorBrl() != null ? l.getValorBrl() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalRealizadoUsd = lancamentos.stream()
-                .map(LancamentoDTO::getValorUsd)
+                .map(l -> l.getValorUsd() != null ? l.getValorUsd() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal saldoRestanteBrl = totalOrcadoBrl.subtract(totalRealizadoBrl);
-        BigDecimal saldoRestanteUsd = totalOrcadoUsd.subtract(totalRealizadoUsd);
+        BigDecimal saldoRestanteUsd = totalOrcadoUsd.subtract(totalRealizadoUsd).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal saldoRestanteBrl = totalOrcadoBrl.subtract(totalRealizadoBrl).setScale(2, RoundingMode.HALF_UP);
 
         double percentualExecucao = 0.0;
-        if (totalOrcadoBrl.compareTo(BigDecimal.ZERO) > 0) {
+        if (totalOrcadoUsd.compareTo(BigDecimal.ZERO) > 0) {
+            percentualExecucao = totalRealizadoUsd.divide(totalOrcadoUsd, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .doubleValue();
+        } else if (totalOrcadoBrl.compareTo(BigDecimal.ZERO) > 0) {
             percentualExecucao = totalRealizadoBrl.divide(totalOrcadoBrl, 4, RoundingMode.HALF_UP)
                     .multiply(BigDecimal.valueOf(100))
                     .doubleValue();
         }
 
         int totalComprovantes = (int) lancamentos.stream()
-                .filter(l -> l.getAnexoUrl() != null && !l.getAnexoUrl().isBlank())
+                .filter(l -> (l.getAnexos() != null && !l.getAnexos().isEmpty()) || (l.getAnexoUrl() != null && !l.getAnexoUrl().isBlank()))
                 .count();
 
         return new RelatorioEventoDTO(
@@ -128,70 +134,97 @@ public class RelatorioService {
     }
 
     @Transactional(readOnly = true)
+    public byte[] gerarRelatorioPdfBytes(Long eventoId) {
+        RelatorioEventoDTO relatorio = obterRelatorioEvento(eventoId);
+        Specification<Lancamento> spec = (root, query, cb) -> cb.equal(root.get("evento").get("id"), eventoId);
+        List<Lancamento> lancamentoEntities = lancamentoRepository.findAll(spec, Sort.by(Sort.Direction.ASC, "data"));
+        return pdfRelatorioService.gerarRelatorioCompletoPdf(relatorio, lancamentoEntities);
+    }
+
+    @Transactional(readOnly = true)
     public void gerarPacotePrestacaoContasZip(Long eventoId, OutputStream outputStream) throws IOException {
         RelatorioEventoDTO relatorio = obterRelatorioEvento(eventoId);
         Specification<Lancamento> spec = (root, query, cb) -> cb.equal(root.get("evento").get("id"), eventoId);
         List<Lancamento> lancamentoEntities = lancamentoRepository.findAll(spec, Sort.by(Sort.Direction.ASC, "data"));
 
         try (ZipOutputStream zos = new ZipOutputStream(outputStream, StandardCharsets.UTF_8)) {
-            // 1. Arquivo CSV estruturado com BOM para compatibilidade com Microsoft Excel
-            ZipEntry csvEntry = new ZipEntry("relatorio-financeiro-" + sanitizarNome(relatorio.eventoNome()) + ".csv");
+            String safeEvento = sanitizarNome(relatorio.eventoNome());
+
+            // 1. Relatório Unificado em PDF (Dossiê com todas as páginas e comprovantes mesclados)
+            try {
+                byte[] pdfBytes = pdfRelatorioService.gerarRelatorioCompletoPdf(relatorio, lancamentoEntities);
+                ZipEntry pdfEntry = new ZipEntry("00_Relatorio_Unificado_Prestacao_Contas_" + safeEvento + ".pdf");
+                zos.putNextEntry(pdfEntry);
+                zos.write(pdfBytes);
+                zos.closeEntry();
+            } catch (Exception e) {
+                logger.error("Erro ao incluir PDF no pacote ZIP: {}", e.getMessage(), e);
+            }
+
+            // 2. Planilha CSV Estruturada e Formatada com Excel BOM
+            ZipEntry csvEntry = new ZipEntry("01_Planilha_Financeira_" + safeEvento + ".csv");
             zos.putNextEntry(csvEntry);
             gerarCsvLancamentosStream(relatorio, zos);
             zos.closeEntry();
 
-            // 2. Sumário executivo em texto
-            ZipEntry resumoEntry = new ZipEntry("resumo-prestacao-contas.txt");
+            // 3. Resumo Executivo em TXT com formatação elegante
+            ZipEntry resumoEntry = new ZipEntry("02_Resumo_Executivo_" + safeEvento + ".txt");
             zos.putNextEntry(resumoEntry);
             gerarResumoTxtStream(relatorio, zos);
             zos.closeEntry();
 
-            // 3. Comprovantes e Notas Fiscais anexados
-            int anexoIdx = 1;
+            // 4. Pasta de Comprovantes Individuais Organizada
+            int lancamentoIdx = 1;
             for (Lancamento lancamento : lancamentoEntities) {
-                if (lancamento.getAnexoUrl() != null && !lancamento.getAnexoUrl().isBlank()) {
-                    try {
-                        Resource resource = storageService.loadAsResource(lancamento.getAnexoUrl());
-                        if (resource.exists() && resource.isReadable()) {
-                            String originalName = lancamento.getAnexoNomeOriginal() != null && !lancamento.getAnexoNomeOriginal().isBlank()
-                                    ? lancamento.getAnexoNomeOriginal()
-                                    : "comprovante";
+                String safeFornecedor = sanitizarNome(lancamento.getFornecedor() != null ? lancamento.getFornecedor() : "Fornecedor");
+                String nfPrefix = (lancamento.getNumeroNotaFiscal() != null && !lancamento.getNumeroNotaFiscal().isBlank())
+                        ? sanitizarNome(lancamento.getNumeroNotaFiscal())
+                        : "SEM-NF";
+                String valorStr = lancamento.getValorBrl().setScale(2, RoundingMode.HALF_UP).toString().replace(".", "_");
 
-                            String ext = "";
-                            int dotIdx = originalName.lastIndexOf('.');
-                            if (dotIdx > 0) {
-                                ext = originalName.substring(dotIdx);
-                            }
-
-                            String safeFornecedor = sanitizarNome(lancamento.getFornecedor() != null ? lancamento.getFornecedor() : "fornecedor");
-                            String nfPrefix = (lancamento.getNumeroNotaFiscal() != null && !lancamento.getNumeroNotaFiscal().isBlank())
-                                    ? sanitizarNome(lancamento.getNumeroNotaFiscal())
-                                    : "SEM-NF";
-
-                            String safeZipPath = String.format("comprovantes/%02d_%s_%s_R$%s%s",
-                                    anexoIdx++,
-                                    nfPrefix,
-                                    safeFornecedor,
-                                    lancamento.getValorBrl().setScale(2, RoundingMode.HALF_UP).toString().replace(".", "_"),
-                                    ext
-                            );
-
-                            ZipEntry attachmentEntry = new ZipEntry(safeZipPath);
-                            zos.putNextEntry(attachmentEntry);
-
-                            try (InputStream in = resource.getInputStream()) {
-                                in.transferTo(zos);
-                            }
-                            zos.closeEntry();
-                        } else {
-                            logger.warn("Comprovante não encontrado para lançamento ID: {}", lancamento.getId());
-                        }
-                    } catch (Exception e) {
-                        logger.error("Erro ao incluir comprovante no ZIP para lançamento ID {}: {}", lancamento.getId(), e.getMessage());
+                if (lancamento.getAnexos() != null && !lancamento.getAnexos().isEmpty()) {
+                    int anexoSubIdx = 1;
+                    for (LancamentoAnexo anexo : lancamento.getAnexos()) {
+                        adicionarAnexoAoZip(zos, anexo.getUrl(), anexo.getNomeOriginal(), lancamentoIdx, nfPrefix, safeFornecedor, valorStr, anexoSubIdx++);
                     }
+                } else if (lancamento.getAnexoUrl() != null && !lancamento.getAnexoUrl().isBlank()) {
+                    adicionarAnexoAoZip(zos, lancamento.getAnexoUrl(), lancamento.getAnexoNomeOriginal(), lancamentoIdx, nfPrefix, safeFornecedor, valorStr, 1);
                 }
+                lancamentoIdx++;
             }
             zos.finish();
+        }
+    }
+
+    private void adicionarAnexoAoZip(ZipOutputStream zos, String fileUrl, String originalName, int lancIdx, String nf, String fornecedor, String valorStr, int anexoSubIdx) {
+        if (fileUrl == null || fileUrl.isBlank()) return;
+
+        try {
+            Resource resource = storageService.loadAsResource(fileUrl);
+            if (resource.exists() && resource.isReadable()) {
+                String safeOriginal = originalName != null && !originalName.isBlank() ? originalName : "comprovante";
+                String ext = "";
+                int dotIdx = safeOriginal.lastIndexOf('.');
+                if (dotIdx > 0) ext = safeOriginal.substring(dotIdx);
+
+                String zipPath = String.format("comprovantes/%02d_%s_%s_R$%s_anexo%d%s",
+                        lancIdx,
+                        nf,
+                        fornecedor,
+                        valorStr,
+                        anexoSubIdx,
+                        ext
+                );
+
+                ZipEntry attachmentEntry = new ZipEntry(zipPath);
+                zos.putNextEntry(attachmentEntry);
+                try (InputStream in = resource.getInputStream()) {
+                    in.transferTo(zos);
+                }
+                zos.closeEntry();
+            }
+        } catch (Exception e) {
+            logger.error("Erro ao incluir anexo {} no ZIP: {}", originalName, e.getMessage());
         }
     }
 
@@ -202,110 +235,168 @@ public class RelatorioService {
         return baos.toByteArray();
     }
 
-    private void gerarCsvLancamentosStream(RelatorioEventoDTO relatorio, OutputStream os) throws IOException {
+    private void gerarCsvLancamentosStream(RelatorioEventoDTO r, OutputStream os) throws IOException {
         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8));
-        // Escreve UTF-8 BOM para o Excel abrir com acentuação correta
         writer.write('\ufeff');
 
-        writer.write("RELATÓRIO DE PRESTAÇÃO DE CONTAS - AWS STUDENT BUILDER GROUP");
+        writer.write("====================================================================================================");
         writer.newLine();
-        writer.write("Evento:;" + escapeCsv(relatorio.eventoNome()));
+        writer.write("AWS STUDENT BUILDER GROUP -- RELATORIO FINANCEIRO CONSOLIDADO");
         writer.newLine();
-        writer.write("Status:;" + escapeCsv(relatorio.status().name()));
+        writer.write("====================================================================================================");
         writer.newLine();
-        writer.write("Orçamento Aprovado (BRL):;R$ " + BRL_FORMAT.format(relatorio.totalOrcadoBrl()));
+        writer.write("Evento:;" + escapeCsv(r.eventoNome()));
         writer.newLine();
-        writer.write("Orçamento Aprovado (USD):;US$ " + USD_FORMAT.format(relatorio.totalOrcadoUsd()));
+        writer.write("Data do Evento:;" + (r.data() != null ? r.data().format(DATE_FORMATTER) : "N/D"));
         writer.newLine();
-        writer.write("Total Realizado (BRL):;R$ " + BRL_FORMAT.format(relatorio.totalRealizadoBrl()));
+        writer.write("Status do Evento:;" + escapeCsv(r.status().name()));
         writer.newLine();
-        writer.write("Total Realizado (USD):;US$ " + USD_FORMAT.format(relatorio.totalRealizadoUsd()));
-        writer.newLine();
-        writer.write("Saldo Restante (BRL):;R$ " + BRL_FORMAT.format(relatorio.saldoRestanteBrl()));
-        writer.newLine();
-        writer.write("Execução Orçamentária:;" + String.format(Locale.US, "%.2f", relatorio.percentualExecucao()) + "%");
+        writer.write("Data de Emissao:;" + LocalDate.now().format(DATE_FORMATTER));
         writer.newLine();
         writer.newLine();
 
-        // Cabeçalho da tabela de lançamentos
-        writer.write("Data;Descrição;Fornecedor;Nº Nota Fiscal;Categoria;Valor (BRL);Valor (USD);Forma Pagamento;Status Financeiro;Responsável;Comprovante Anexado");
+        // BALANÇO FINANCEIRO
+        writer.write("--- BALANCO FINANCEIRO EXECUTIVO ---");
+        writer.newLine();
+        writer.write("Orcamento Aprovado (BRL):;R$ " + BRL_FORMAT.format(r.totalOrcadoBrl()));
+        writer.newLine();
+        writer.write("Orcamento Aprovado (USD):;US$ " + USD_FORMAT.format(r.totalOrcadoUsd()));
+        writer.newLine();
+        writer.write("Total Realizado / Gasto (BRL):;R$ " + BRL_FORMAT.format(r.totalRealizadoBrl()));
+        writer.newLine();
+        writer.write("Total Realizado / Gasto (USD):;US$ " + USD_FORMAT.format(r.totalRealizadoUsd()));
+        writer.newLine();
+        writer.write("Saldo Restante (BRL):;R$ " + BRL_FORMAT.format(r.saldoRestanteBrl()));
+        writer.newLine();
+        writer.write("Saldo Restante (USD):;US$ " + USD_FORMAT.format(r.saldoRestanteUsd()));
+        writer.newLine();
+        writer.write("Execucao Orcamentaria:;" + String.format(Locale.US, "%.2f", r.percentualExecucao()) + "%");
+        writer.newLine();
+        writer.write("Total de Lancamentos:;" + r.totalLancamentos());
+        writer.newLine();
+        writer.write("Comprovantes Anexados:;" + r.totalComprovantesAnexados() + " de " + r.totalLancamentos());
+        writer.newLine();
         writer.newLine();
 
-        for (LancamentoDTO l : relatorio.lancamentos()) {
-            writer.write(String.format("%s;%s;%s;%s;%s;R$ %s;US$ %s;%s;%s;%s;%s",
+        // TABELA 1: ORÇAMENTO POR CATEGORIA
+        writer.write("--- 1. PLANEJAMENTO ORCAMENTARIO POR CATEGORIA ---");
+        writer.newLine();
+        writer.write("Categoria;Orcado (USD);Taxa Cambio Usada;Orcado (BRL);Gasto Realizado (BRL);Saldo Categoria (BRL)");
+        writer.newLine();
+        for (ItemOrcamentoDTO item : r.itensOrcamento()) {
+            writer.write(String.format("%s;US$ %s;R$ %s;R$ %s;R$ %s;R$ %s",
+                    escapeCsv(item.getCategoriaNome()),
+                    USD_FORMAT.format(item.getValorOrcadoUsd() != null ? item.getValorOrcadoUsd() : BigDecimal.ZERO),
+                    item.getTaxaCambioUsada() != null ? item.getTaxaCambioUsada().setScale(4, RoundingMode.HALF_UP) : "5.5000",
+                    BRL_FORMAT.format(item.getValorOrcadoBrl() != null ? item.getValorOrcadoBrl() : BigDecimal.ZERO),
+                    BRL_FORMAT.format(item.getValorRealizadoBrl() != null ? item.getValorRealizadoBrl() : BigDecimal.ZERO),
+                    BRL_FORMAT.format(item.getSaldoBrl() != null ? item.getSaldoBrl() : BigDecimal.ZERO)
+            ));
+            writer.newLine();
+        }
+        writer.newLine();
+
+        // TABELA 2: LANÇAMENTOS E DESPESAS
+        writer.write("--- 2. LANCAMENTOS & DESPESAS REALIZADAS ---");
+        writer.newLine();
+        writer.write("Data;Descricao;Fornecedor;No Nota Fiscal;Categoria;Valor (BRL);Valor (USD);Taxa Cambio Usada;Forma Pagamento;Status Financeiro;Responsavel;Qtd Comprovantes");
+        writer.newLine();
+        for (LancamentoDTO l : r.lancamentos()) {
+            int qtdAnexos = (l.getAnexos() != null && !l.getAnexos().isEmpty()) ? l.getAnexos().size() : (l.getAnexoUrl() != null ? 1 : 0);
+            writer.write(String.format("%s;%s;%s;%s;%s;R$ %s;US$ %s;R$ %s;%s;%s;%s;%d",
                     l.getData() != null ? l.getData().format(DATE_FORMATTER) : "",
                     escapeCsv(l.getDescricao()),
                     escapeCsv(l.getFornecedor()),
-                    escapeCsv(l.getNumeroNotaFiscal() != null ? l.getNumeroNotaFiscal() : ""),
+                    escapeCsv(l.getNumeroNotaFiscal() != null ? l.getNumeroNotaFiscal() : "--"),
                     escapeCsv(l.getCategoriaNome() != null ? l.getCategoriaNome() : ""),
                     l.getValorBrl() != null ? BRL_FORMAT.format(l.getValorBrl()) : "0,00",
                     l.getValorUsd() != null ? USD_FORMAT.format(l.getValorUsd()) : "0.00",
+                    l.getTaxaCambioUsada() != null ? l.getTaxaCambioUsada().setScale(4, RoundingMode.HALF_UP) : "5.5000",
                     escapeCsv(l.getFormaPagamento() != null ? l.getFormaPagamento() : ""),
                     escapeCsv(l.getStatusNome() != null ? l.getStatusNome() : ""),
                     escapeCsv(l.getResponsavelNome() != null ? l.getResponsavelNome() : ""),
-                    l.getAnexoUrl() != null && !l.getAnexoUrl().isBlank() ? "SIM" : "NÃO"
+                    qtdAnexos
             ));
             writer.newLine();
         }
+        writer.newLine();
 
-        writer.newLine();
-        writer.write("PARCERIAS E PATROCÍNIOS DO EVENTO");
-        writer.newLine();
-        writer.write("Parceiro;Tipo;Valor Contrapartida (BRL);Itens Recebidos;Status;Contato");
-        writer.newLine();
-        for (ParceriaDTO p : relatorio.parcerias()) {
-            writer.write(String.format("%s;%s;R$ %s;%s;%s;%s",
-                    escapeCsv(p.getParceiro()),
-                    escapeCsv(p.getTipo() != null ? p.getTipo().name() : ""),
-                    p.getValorContrapartida() != null ? BRL_FORMAT.format(p.getValorContrapartida()) : "0,00",
-                    escapeCsv(p.getItensRecebidos() != null ? p.getItensRecebidos() : ""),
-                    escapeCsv(p.getStatus() != null ? p.getStatus().name() : ""),
-                    escapeCsv(p.getContato() != null ? p.getContato() : "")
-            ));
+        // TABELA 3: PARCERIAS
+        if (r.parcerias() != null && !r.parcerias().isEmpty()) {
+            writer.write("--- 3. PARCERIAS E PATROCINIOS DO EVENTO ---");
+            writer.newLine();
+            writer.write("Parceiro;Tipo;Valor Contrapartida (BRL);Itens Recebidos;Status;Contato");
+            writer.newLine();
+            for (ParceriaDTO p : r.parcerias()) {
+                writer.write(String.format("%s;%s;R$ %s;%s;%s;%s",
+                        escapeCsv(p.getParceiro()),
+                        escapeCsv(p.getTipo() != null ? p.getTipo().name() : ""),
+                        p.getValorContrapartida() != null ? BRL_FORMAT.format(p.getValorContrapartida()) : "0,00",
+                        escapeCsv(p.getItensRecebidos() != null ? p.getItensRecebidos() : ""),
+                        escapeCsv(p.getStatus() != null ? p.getStatus().name() : ""),
+                        escapeCsv(p.getContato() != null ? p.getContato() : "")
+                ));
+                writer.newLine();
+            }
             writer.newLine();
         }
 
-        writer.newLine();
-        writer.write("DISTRIBUIÇÃO DE BRINDES (SWAG)");
-        writer.newLine();
-        writer.write("Item;Qtd Distribuída;Data Distribuição;Observações");
-        writer.newLine();
-        for (BrindeDTO b : relatorio.brindesUtilizados()) {
-            writer.write(String.format("%s;%d;%s;%s",
-                    escapeCsv(b.getItem()),
-                    b.getQtdDistribuida() != null ? b.getQtdDistribuida() : 0,
-                    b.getDataDistribuicao() != null ? b.getDataDistribuicao().format(DATE_FORMATTER) : "",
-                    escapeCsv(b.getObservacoes() != null ? b.getObservacoes() : "")
-            ));
+        // TABELA 4: BRINDES
+        if (r.brindesUtilizados() != null && !r.brindesUtilizados().isEmpty()) {
+            writer.write("--- 4. DISTRIBUICAO DE BRINDES (SWAG) ---");
             writer.newLine();
+            writer.write("Item;Qtd Distribuida;Data Distribuicao;Observacoes");
+            writer.newLine();
+            for (BrindeDTO b : r.brindesUtilizados()) {
+                writer.write(String.format("%s;%d;%s;%s",
+                        escapeCsv(b.getItem()),
+                        b.getQtdDistribuida() != null ? b.getQtdDistribuida() : 0,
+                        b.getDataDistribuicao() != null ? b.getDataDistribuicao().format(DATE_FORMATTER) : "",
+                        escapeCsv(b.getObservacoes() != null ? b.getObservacoes() : "")
+                ));
+                writer.newLine();
+            }
         }
 
         writer.flush();
     }
 
-    private void gerarResumoTxtStream(RelatorioEventoDTO relatorio, OutputStream os) throws IOException {
+    private void gerarResumoTxtStream(RelatorioEventoDTO r, OutputStream os) throws IOException {
         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8));
-        writer.write("========================================================================\n");
-        writer.write("     AWS STUDENT BUILDER GROUP - RELATÓRIO DE PRESTAÇÃO DE CONTAS      \n");
-        writer.write("========================================================================\n\n");
-        writer.write("Evento: " + relatorio.eventoNome() + "\n");
-        writer.write("Status: " + relatorio.status() + "\n");
-        if (relatorio.data() != null) {
-            writer.write("Data do Evento: " + relatorio.data().format(DATE_FORMATTER) + "\n");
+        writer.write("========================================================================================\n");
+        writer.write("                  AWS STUDENT BUILDER GROUP -- PRESTACAO DE CONTAS                      \n");
+        writer.write("========================================================================================\n\n");
+        writer.write("EVENTO: " + r.eventoNome() + "\n");
+        writer.write("STATUS: " + r.status() + "\n");
+        if (r.data() != null) {
+            writer.write("DATA DO EVENTO: " + r.data().format(DATE_FORMATTER) + "\n");
         }
-        writer.write("\n------------------------------------------------------------------------\n");
-        writer.write(" BALANÇO FINANCEIRO CONSOLIDADO\n");
-        writer.write("------------------------------------------------------------------------\n");
-        writer.write(" • Orçamento Total Planejado (BRL): R$ " + BRL_FORMAT.format(relatorio.totalOrcadoBrl()) + "\n");
-        writer.write(" • Orçamento Total Planejado (USD): US$ " + USD_FORMAT.format(relatorio.totalOrcadoUsd()) + "\n");
-        writer.write(" • Total Realizado / Gasto (BRL):   R$ " + BRL_FORMAT.format(relatorio.totalRealizadoBrl()) + "\n");
-        writer.write(" • Total Realizado / Gasto (USD):   US$ " + USD_FORMAT.format(relatorio.totalRealizadoUsd()) + "\n");
-        writer.write(" • Saldo Restante (BRL):            R$ " + BRL_FORMAT.format(relatorio.saldoRestanteBrl()) + "\n");
-        writer.write(" • Execução Orçamentária:           " + String.format(Locale.US, "%.2f", relatorio.percentualExecucao()) + "%\n");
-        writer.write(" • Total de Lançamentos:            " + relatorio.totalLancamentos() + "\n");
-        writer.write(" • Comprovantes Anexados:           " + relatorio.totalComprovantesAnexados() + " de " + relatorio.totalLancamentos() + "\n");
-        writer.write("\n========================================================================\n");
-        writer.write("Gerado automaticamente pelo Sistema de Gestão Financeira AWS SBG.\n");
+        writer.write("DATA DE EMISSAO: " + LocalDate.now().format(DATE_FORMATTER) + "\n");
+        writer.write("\n----------------------------------------------------------------------------------------\n");
+        writer.write(" BALANCO FINANCEIRO CONSOLIDADO\n");
+        writer.write("----------------------------------------------------------------------------------------\n");
+        writer.write(String.format(" * Orcamento Aprovado (BRL):       R$ %15s\n", BRL_FORMAT.format(r.totalOrcadoBrl())));
+        writer.write(String.format(" * Orcamento Aprovado (USD):      US$ %15s\n", USD_FORMAT.format(r.totalOrcadoUsd())));
+        writer.write(String.format(" * Total Realizado / Gasto (BRL): R$ %15s\n", BRL_FORMAT.format(r.totalRealizadoBrl())));
+        writer.write(String.format(" * Total Realizado / Gasto (USD):US$ %15s\n", USD_FORMAT.format(r.totalRealizadoUsd())));
+        writer.write(String.format(" * Saldo Restante (BRL):          R$ %15s\n", BRL_FORMAT.format(r.saldoRestanteBrl())));
+        writer.write(String.format(" * Saldo Restante (USD):         US$ %15s\n", USD_FORMAT.format(r.saldoRestanteUsd())));
+        writer.write(String.format(" * Execucao Orcamentaria:            %14.2f %%\n", r.percentualExecucao()));
+        writer.write(String.format(" * Total de Lancamentos:             %14d\n", r.totalLancamentos()));
+        writer.write(String.format(" * Comprovantes Anexados:            %14s\n", r.totalComprovantesAnexados() + " de " + r.totalLancamentos()));
+        writer.write("\n----------------------------------------------------------------------------------------\n");
+        writer.write(" RESUMO POR CATEGORIA DE DESPESA\n");
+        writer.write("----------------------------------------------------------------------------------------\n");
+        for (ItemOrcamentoDTO item : r.itensOrcamento()) {
+            writer.write(String.format(" - %-25s | Orcado: R$ %10s | Gasto: R$ %10s | Saldo: R$ %10s\n",
+                    item.getCategoriaNome(),
+                    BRL_FORMAT.format(item.getValorOrcadoBrl() != null ? item.getValorOrcadoBrl() : BigDecimal.ZERO),
+                    BRL_FORMAT.format(item.getValorRealizadoBrl() != null ? item.getValorRealizadoBrl() : BigDecimal.ZERO),
+                    BRL_FORMAT.format(item.getSaldoBrl() != null ? item.getSaldoBrl() : BigDecimal.ZERO)
+            ));
+        }
+        writer.write("\n========================================================================================\n");
+        writer.write("Gerado automaticamente pelo Sistema de Gestao Financeira AWS SBG.\n");
         writer.flush();
     }
 

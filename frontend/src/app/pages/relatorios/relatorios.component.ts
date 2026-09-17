@@ -20,13 +20,24 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
         </div>
 
         <div class="header-actions">
+          <button class="btn btn-primary" (click)="downloadPdf()" [disabled]="!relatorio() || isDownloadingPdf()">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            {{ isDownloadingPdf() ? 'Gerando PDF Unificado...' : 'Baixar Relatório Unificado (PDF)' }}
+          </button>
+
           <button class="btn btn-outline" (click)="printReport()" [disabled]="!relatorio()">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="6 9 6 2 18 2 18 9"></polyline>
               <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
               <rect x="6" y="14" width="12" height="8"></rect>
             </svg>
-            Imprimir / Salvar PDF
+            Imprimir Página
           </button>
 
           <button class="btn btn-outline" (click)="downloadCsv()" [disabled]="!relatorio() || isDownloadingCsv()">
@@ -40,13 +51,13 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
             {{ isDownloadingCsv() ? 'Gerando CSV...' : 'Planilha (CSV)' }}
           </button>
 
-          <button class="btn btn-primary" (click)="downloadZip()" [disabled]="!relatorio() || isDownloadingZip()">
+          <button class="btn btn-outline" (click)="downloadZip()" [disabled]="!relatorio() || isDownloadingZip()">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            {{ isDownloadingZip() ? 'Compactando Anexos...' : 'Baixar Prestação Completa (.ZIP)' }}
+            {{ isDownloadingZip() ? 'Compactando Pacote...' : 'Baixar Pacote Completo (.ZIP)' }}
           </button>
         </div>
       </div>
@@ -234,7 +245,15 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                       </span>
                     </td>
                     <td>
-                      @if (l.anexoUrl) {
+                      @if (l.anexos && l.anexos.length > 0) {
+                        <div class="anexos-cell-list">
+                          @for (anx of l.anexos; track anx.id) {
+                            <a [href]="anx.url" target="_blank" class="btn btn-sm btn-outline btn-anexo">
+                              📎 {{ anx.nomeOriginal }}
+                            </a>
+                          }
+                        </div>
+                      } @else if (l.anexoUrl) {
                         <a [href]="'/api/lancamentos/' + l.id + '/anexo'" target="_blank" class="btn btn-sm btn-outline btn-anexo">
                           📎 {{ l.anexoNomeOriginal || 'Ver Comprovante' }}
                         </a>
@@ -505,7 +524,14 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       padding: 0.3rem 0.6rem;
       color: var(--color-blue);
       border-color: var(--color-blue);
+      text-decoration: none;
+      display: inline-block;
       &:hover { background: var(--color-blue-subtle); }
+    }
+    .anexos-cell-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
     }
     .loading-box {
       padding: 4rem 2rem;
@@ -537,7 +563,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       .no-print { display: none !important; }
       .only-print { display: block !important; }
       .page-container { padding: 0; max-width: 100%; }
-      .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+      .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; page-break-inside: avoid; }
       .print-header {
         margin-bottom: 1.5rem;
         padding-bottom: 1rem;
@@ -573,6 +599,7 @@ export class RelatoriosComponent implements OnInit {
   relatorio = signal<RelatorioEvento | null>(null);
 
   isLoading = signal(false);
+  isDownloadingPdf = signal(false);
   isDownloadingZip = signal(false);
   isDownloadingCsv = signal(false);
   dataAtual = new Date();
@@ -610,6 +637,32 @@ export class RelatoriosComponent implements OnInit {
     });
   }
 
+  downloadPdf() {
+    if (!this.selectedEventoId) return;
+
+    this.isDownloadingPdf.set(true);
+    this.toast.info('Gerando relatório unificado em PDF com todos os comprovantes...');
+
+    this.apiService.downloadRelatorioPdf(this.selectedEventoId).subscribe({
+      next: (blob) => {
+        this.isDownloadingPdf.set(false);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `relatorio-unificado-evento-${this.selectedEventoId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        this.toast.success('Relatório unificado em PDF baixado com sucesso!');
+      },
+      error: () => {
+        this.isDownloadingPdf.set(false);
+        this.toast.error('Erro ao gerar relatório unificado em PDF.');
+      }
+    });
+  }
+
   downloadZip() {
     if (!this.selectedEventoId) return;
 
@@ -640,6 +693,7 @@ export class RelatoriosComponent implements OnInit {
     if (!this.selectedEventoId) return;
 
     this.isDownloadingCsv.set(true);
+    this.toast.info('Exportando planilha estruturada (CSV)...');
     this.apiService.downloadRelatorioCsv(this.selectedEventoId).subscribe({
       next: (blob) => {
         this.isDownloadingCsv.set(false);

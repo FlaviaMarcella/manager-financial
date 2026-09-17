@@ -1,5 +1,6 @@
 package com.aws.studentbuilder.finance.controller;
 
+import com.aws.studentbuilder.finance.dto.LancamentoAnexoDTO;
 import com.aws.studentbuilder.finance.dto.LancamentoDTO;
 import com.aws.studentbuilder.finance.dto.LancamentoRequest;
 import com.aws.studentbuilder.finance.service.LancamentoService;
@@ -73,23 +74,52 @@ public class LancamentoController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping(value = "/{id}/anexos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Upload de múltiplos comprovantes/anexos para o lançamento")
+    public ResponseEntity<LancamentoDTO> uploadMultiplosAnexos(@PathVariable Long id, @RequestParam("files") List<MultipartFile> files) {
+        return ResponseEntity.ok(lancamentoService.vincularAnexos(id, files));
+    }
+
     @PostMapping(value = "/{id}/anexo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Upload de comprovante/anexo para o lançamento")
+    @Operation(summary = "Upload de um comprovante para o lançamento (compatibilidade legada)")
     public ResponseEntity<LancamentoDTO> uploadAnexo(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
-        return ResponseEntity.ok(lancamentoService.vincularAnexo(id, file));
+        return ResponseEntity.ok(lancamentoService.vincularAnexos(id, List.of(file)));
+    }
+
+    @DeleteMapping("/{id}/anexos/{anexoId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Remover um anexo específico do lançamento")
+    public ResponseEntity<LancamentoDTO> removerAnexoEspecifico(@PathVariable Long id, @PathVariable Long anexoId) {
+        return ResponseEntity.ok(lancamentoService.removerAnexoEspecifico(id, anexoId));
     }
 
     @DeleteMapping("/{id}/anexo")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Remover anexo do lançamento")
-    public ResponseEntity<LancamentoDTO> removerAnexo(@PathVariable Long id) {
+    @Operation(summary = "Remover todos os anexos do lançamento")
+    public ResponseEntity<LancamentoDTO> removerAnexos(@PathVariable Long id) {
         return ResponseEntity.ok(lancamentoService.removerAnexo(id));
+    }
+
+    @GetMapping("/{id}/anexos/{anexoId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VIEWER')")
+    @Operation(summary = "Download ou visualização de um anexo específico")
+    public ResponseEntity<Resource> downloadAnexoEspecifico(@PathVariable Long id, @PathVariable Long anexoId) {
+        Resource resource = lancamentoService.carregarAnexoEspecifico(id, anexoId);
+        LancamentoAnexoDTO anexoDTO = lancamentoService.buscarAnexoPorId(anexoId);
+
+        String contentType = anexoDTO.getContentType() != null ? anexoDTO.getContentType() : "application/octet-stream";
+        String disposition = "inline; filename=\"" + anexoDTO.getNomeOriginal() + "\"";
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .body(resource);
     }
 
     @GetMapping("/{id}/anexo")
     @PreAuthorize("hasAnyRole('ADMIN', 'VIEWER')")
-    @Operation(summary = "Download ou visualização do anexo")
+    @Operation(summary = "Download ou visualização do anexo principal do lançamento")
     public ResponseEntity<Resource> downloadAnexo(@PathVariable Long id) {
         Resource resource = lancamentoService.carregarAnexo(id);
         LancamentoDTO dto = lancamentoService.buscarPorId(id);
@@ -102,9 +132,11 @@ public class LancamentoController {
             else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) contentType = "image/jpeg";
         }
 
+        String filename = dto.getAnexoNomeOriginal() != null ? dto.getAnexoNomeOriginal() : "comprovante";
+        String disposition = "inline; filename=\"" + filename + "\"";
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + (dto.getAnexoNomeOriginal() != null ? dto.getAnexoNomeOriginal() : "comprovante") + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
                 .body(resource);
     }
 }

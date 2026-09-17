@@ -183,12 +183,24 @@ export class ApiService {
     return this.http.post<Lancamento>(`${this.baseUrl}/lancamentos/${id}/anexo`, formData);
   }
 
+  uploadMultiplosAnexosLancamento(id: number, files: File[]): Observable<Lancamento> {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('files', file);
+    }
+    return this.http.post<Lancamento>(`${this.baseUrl}/lancamentos/${id}/anexos`, formData);
+  }
+
   downloadAnexoLancamento(id: number): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/lancamentos/${id}/anexo`, { responseType: 'blob' });
   }
 
   removeAnexoLancamento(id: number): Observable<Lancamento> {
     return this.http.delete<Lancamento>(`${this.baseUrl}/lancamentos/${id}/anexo`);
+  }
+
+  deleteAnexoLancamento(id: number, anexoId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/lancamentos/${id}/anexos/${anexoId}`);
   }
 
   // Parcerias
@@ -256,6 +268,12 @@ export class ApiService {
   // Relatórios & Prestação de Contas
   getRelatorioEvento(eventoId: number): Observable<RelatorioEvento> {
     return this.http.get<RelatorioEvento>(`${this.baseUrl}/relatorios/eventos/${eventoId}`);
+  }
+
+  downloadRelatorioPdf(eventoId: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/relatorios/eventos/${eventoId}/pdf`, {
+      responseType: 'blob'
+    });
   }
 
   downloadRelatorioZip(eventoId: number): Observable<Blob> {
