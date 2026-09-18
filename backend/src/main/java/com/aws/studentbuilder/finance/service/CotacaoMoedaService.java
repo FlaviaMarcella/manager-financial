@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -18,9 +19,11 @@ import java.time.format.DateTimeFormatter;
 public class CotacaoMoedaService {
 
     private static final Logger log = LoggerFactory.getLogger(CotacaoMoedaService.class);
+    private static final String BACEN_PTAX_URL_TEMPLATE = "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='%s'&@dataFinalCotacao='%s'&$top=5&$orderby=dataHoraCotacao%%20desc&$format=json";
     private static final String AWESOME_API_URL = "https://economia.awesomeapi.com.br/last/USD-BRL";
     private static final String OPEN_ER_API_URL = "https://open.er-api.com/v6/latest/USD";
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter BCB_DATE_FMT = DateTimeFormatter.ofPattern("MM-dd-yyyy");
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -49,7 +52,58 @@ public class CotacaoMoedaService {
             return cachedCotacao;
         }
 
-        // 1. Tenta AwesomeAPI Comercial em Tempo Real
+        // 1. Provedor Primário: Banco Central do Brasil (BACEN / PTAX Oficial)
+        try {
+            LocalDate hoje = LocalDate.now();
+            LocalDate inicio = hoje.minusDays(7);
+            String urlBacen = String.format(BACEN_PTAX_URL_TEMPLATE, inicio.format(BCB_DATE_FMT), hoje.format(BCB_DATE_FMT));
+
+            String jsonResponse = restClient.get()
+                    .uri(urlBacen)
+                    .retrieve()
+                    .body(String.class);
+
+            if (jsonResponse != null && !jsonResponse.isBlank()) {
+                JsonNode root = objectMapper.readTree(jsonResponse);
+                JsonNode valueArray = root.path("value");
+                if (valueArray.isArray() && !valueArray.isEmpty()) {
+                    JsonNode latest = valueArray.get(0);
+                    BigDecimal cotacaoVenda = new BigDecimal(latest.path("cotacaoVenda").asText("5.5000")).setScale(4, RoundingMode.HALF_UP);
+                    BigDecimal cotacaoCompra = new BigDecimal(latest.path("cotacaoCompra").asText(cotacaoVenda.toString())).setScale(4, RoundingMode.HALF_UP);
+                    String dataHoraCotacao = latest.path("dataHoraCotacao").asText(LocalDateTime.now().format(FORMATTER));
+
+                    BigDecimal variacao = BigDecimal.ZERO;
+                    BigDecimal pctChange = BigDecimal.ZERO;
+
+                    if (valueArray.size() > 1) {
+                        JsonNode previous = valueArray.get(1);
+                        BigDecimal cotacaoVendaAnterior = new BigDecimal(previous.path("cotacaoVenda").asText(cotacaoVenda.toString()));
+                        variacao = cotacaoVenda.subtract(cotacaoVendaAnterior).setScale(4, RoundingMode.HALF_UP);
+                        if (cotacaoVendaAnterior.compareTo(BigDecimal.ZERO) > 0) {
+                            pctChange = variacao.divide(cotacaoVendaAnterior, 4, RoundingMode.HALF_UP)
+                                    .multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
+                        }
+                    }
+
+                    cachedCotacao = CotacaoDolarDTO.builder()
+                            .cotacaoOficial(cotacaoVenda)
+                            .maximo(cotacaoVenda)
+                            .minimo(cotacaoCompra)
+                            .variacao(variacao)
+                            .pctChange(pctChange)
+                            .dataHoraCotacao(dataHoraCotacao)
+                            .fonte("Banco Central do Brasil (PTAX Oficial)")
+                            .build();
+                    lastFetchTime = LocalDateTime.now();
+                    log.info("Cotação do Dólar obtida com sucesso via Banco Central (PTAX): R$ {}", cotacaoVenda);
+                    return cachedCotacao;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Banco Central (BACEN PTAX) indisponível ou com erro: {}. Tentando AwesomeAPI...", e.getMessage());
+        }
+
+        // 2. Provedor Secundário (Fallback 1): AwesomeAPI Comercial em Tempo Real
         try {
             String jsonResponse = restClient.get()
                     .uri(AWESOME_API_URL)
@@ -74,18 +128,18 @@ public class CotacaoMoedaService {
                             .variacao(varBid)
                             .pctChange(pctChange)
                             .dataHoraCotacao(createDate)
-                            .fonte("AwesomeAPI / Mercado Financeiro Comercial")
+                            .fonte("AwesomeAPI (Mercado Comercial)")
                             .build();
                     lastFetchTime = LocalDateTime.now();
-                    log.info("Cotação do Dólar atualizada com sucesso via AwesomeAPI: R$ {}", bid);
+                    log.info("Cotação do Dólar obtida via AwesomeAPI: R$ {}", bid);
                     return cachedCotacao;
                 }
             }
         } catch (Exception e) {
-            log.warn("AwesomeAPI indisponível ou com erro: {}. Tentando provedor de fallback...", e.getMessage());
+            log.warn("AwesomeAPI indisponível ou com erro: {}. Tentando ExchangeRate-API...", e.getMessage());
         }
 
-        // 2. Fallback Secundário: Open Exchange Rates
+        // 3. Provedor Terciário (Fallback 2): Open Exchange Rates
         try {
             String jsonResponse = restClient.get()
                     .uri(OPEN_ER_API_URL)
@@ -121,11 +175,11 @@ public class CotacaoMoedaService {
             return cachedCotacao;
         }
 
-        // 3. Fallback de contingência
+        // 4. Contingência final
         return CotacaoDolarDTO.builder()
-                .cotacaoOficial(new BigDecimal("5.1500"))
-                .maximo(new BigDecimal("5.2000"))
-                .minimo(new BigDecimal("5.1000"))
+                .cotacaoOficial(new BigDecimal("5.5000"))
+                .maximo(new BigDecimal("5.5500"))
+                .minimo(new BigDecimal("5.4500"))
                 .variacao(BigDecimal.ZERO)
                 .pctChange(BigDecimal.ZERO)
                 .dataHoraCotacao(LocalDateTime.now().format(FORMATTER))

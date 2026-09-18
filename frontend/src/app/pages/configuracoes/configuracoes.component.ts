@@ -34,7 +34,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
             <!-- Coluna 1: Cotação Comercial de Mercado (Hoje) -->
             <div class="cambio-box market-box">
               <div class="box-top">
-                <span class="box-tag">🌐 Mercado Oficial Hoje</span>
+                <span class="box-tag">🏛️ Cotação Oficial (BACEN / PTAX)</span>
                 <button type="button" class="btn btn-sm btn-outline btn-refresh" (click)="loadCotacaoMercado(true)" [disabled]="isLoadingCotacao()">
                   {{ isLoadingCotacao() ? '...' : '🔄 Atualizar' }}
                 </button>
