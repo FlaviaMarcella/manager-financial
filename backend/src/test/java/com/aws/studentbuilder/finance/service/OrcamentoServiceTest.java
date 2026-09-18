@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -60,6 +61,7 @@ class OrcamentoServiceTest {
                 .id(1L)
                 .evento(evento)
                 .categoria(categoria)
+                .descricao("Aporte Inicial")
                 .valorOrcadoUsd(new BigDecimal("100.00"))
                 .taxaCambioUsada(new BigDecimal("5.5000"))
                 .build();
@@ -71,25 +73,61 @@ class OrcamentoServiceTest {
         ItemOrcamentoRequest request = ItemOrcamentoRequest.builder()
                 .eventoId(1L)
                 .categoriaId(1L)
+                .descricao("Aporte Inicial")
                 .valorOrcadoUsd(new BigDecimal("100.00"))
                 .build();
 
         when(eventoRepository.findById(1L)).thenReturn(Optional.of(evento));
         when(categoriaRepository.findById(1L)).thenReturn(Optional.of(categoria));
-        when(itemOrcamentoRepository.findByEventoIdAndCategoriaId(1L, 1L)).thenReturn(Optional.empty());
         when(configService.getTaxaCambioAtual()).thenReturn(new BigDecimal("5.5000"));
         when(itemOrcamentoRepository.save(any(ItemOrcamento.class))).thenReturn(itemOrcamento);
+        when(itemOrcamentoRepository.sumOrcadoUsdByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("100.00"));
         when(lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("200.00"));
         when(lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("36.36"));
 
         ItemOrcamentoDTO resultado = orcamentoService.criar(request);
 
         assertNotNull(resultado);
+        assertEquals("Aporte Inicial", resultado.getDescricao());
         assertEquals(new BigDecimal("100.00"), resultado.getValorOrcadoUsd());
         assertEquals(new BigDecimal("550.00"), resultado.getValorOrcadoBrl());
         assertEquals(new BigDecimal("200.00"), resultado.getValorRealizadoBrl());
         assertEquals(new BigDecimal("63.64"), resultado.getSaldoUsd());
         assertEquals(new BigDecimal("350.02"), resultado.getSaldoBrl());
+    }
+
+    @Test
+    @DisplayName("Deve permitir cadastrar múltiplos aportes para o mesmo evento e categoria")
+    void devePermitirMultiplosAportesParaMesmoEventoECategoria() {
+        ItemOrcamento item2 = ItemOrcamento.builder()
+                .id(2L)
+                .evento(evento)
+                .categoria(categoria)
+                .descricao("Patrocínio Adicional AWS")
+                .valorOrcadoUsd(new BigDecimal("50.00"))
+                .taxaCambioUsada(new BigDecimal("5.5000"))
+                .build();
+
+        ItemOrcamentoRequest request2 = ItemOrcamentoRequest.builder()
+                .eventoId(1L)
+                .categoriaId(1L)
+                .descricao("Patrocínio Adicional AWS")
+                .valorOrcadoUsd(new BigDecimal("50.00"))
+                .build();
+
+        when(eventoRepository.findById(1L)).thenReturn(Optional.of(evento));
+        when(categoriaRepository.findById(1L)).thenReturn(Optional.of(categoria));
+        when(configService.getTaxaCambioAtual()).thenReturn(new BigDecimal("5.5000"));
+        when(itemOrcamentoRepository.save(any(ItemOrcamento.class))).thenReturn(item2);
+        when(itemOrcamentoRepository.sumOrcadoUsdByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("150.00"));
+        when(lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("0.00"));
+        when(lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("0.00"));
+
+        ItemOrcamentoDTO resultado = orcamentoService.criar(request2);
+
+        assertNotNull(resultado);
+        assertEquals("Patrocínio Adicional AWS", resultado.getDescricao());
+        assertEquals(new BigDecimal("50.00"), resultado.getValorOrcadoUsd());
     }
 
     @Test
@@ -104,6 +142,7 @@ class OrcamentoServiceTest {
                 .taxaCambioUsada(new BigDecimal("5.1355"))
                 .build();
 
+        when(itemOrcamentoRepository.sumOrcadoUsdByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("168.11"));
         when(lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("168.11"));
         when(lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("771.96"));
 
@@ -133,10 +172,9 @@ class OrcamentoServiceTest {
         when(eventoRepository.findById(1L)).thenReturn(Optional.of(evento));
         when(categoriaRepository.findById(1L)).thenReturn(Optional.of(categoria));
         when(eventoRepository.findById(2L)).thenReturn(Optional.of(eventoDestino));
-        when(itemOrcamentoRepository.findByEventoIdAndCategoriaId(1L, 1L)).thenReturn(Optional.of(itemOrcamento));
+        when(itemOrcamentoRepository.findByEventoIdAndCategoriaId(1L, 1L)).thenReturn(List.of(itemOrcamento));
         when(lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(1L, 1L)).thenReturn(new BigDecimal("30.00"));
         when(configService.getTaxaCambioAtual()).thenReturn(new BigDecimal("5.5000"));
-        when(itemOrcamentoRepository.findByEventoIdAndCategoriaId(2L, 1L)).thenReturn(Optional.empty());
 
         TransferenciaOrcamento transfSalva = TransferenciaOrcamento.builder()
                 .id(10L)

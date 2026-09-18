@@ -11,6 +11,8 @@ public class ItemOrcamentoRequest {
     @NotNull(message = "Categoria é obrigatória")
     private Long categoriaId;
 
+    private String descricao;
+
     @NotNull(message = "Valor orçado em USD é obrigatório")
     @PositiveOrZero(message = "Valor orçado deve ser maior ou igual a zero")
     private BigDecimal valorOrcadoUsd;
@@ -20,9 +22,10 @@ public class ItemOrcamentoRequest {
 
     public ItemOrcamentoRequest() {}
 
-    public ItemOrcamentoRequest(Long eventoId, Long categoriaId, BigDecimal valorOrcadoUsd, BigDecimal taxaCambioUsada, String observacoes) {
+    public ItemOrcamentoRequest(Long eventoId, Long categoriaId, String descricao, BigDecimal valorOrcadoUsd, BigDecimal taxaCambioUsada, String observacoes) {
         this.eventoId = eventoId;
         this.categoriaId = categoriaId;
+        this.descricao = descricao;
         this.valorOrcadoUsd = valorOrcadoUsd;
         this.taxaCambioUsada = taxaCambioUsada;
         this.observacoes = observacoes;
@@ -33,22 +36,26 @@ public class ItemOrcamentoRequest {
     public static class Builder {
         private Long eventoId;
         private Long categoriaId;
+        private String descricao;
         private BigDecimal valorOrcadoUsd;
         private BigDecimal taxaCambioUsada;
         private String observacoes;
 
         public Builder eventoId(Long eventoId) { this.eventoId = eventoId; return this; }
         public Builder categoriaId(Long categoriaId) { this.categoriaId = categoriaId; return this; }
+        public Builder descricao(String descricao) { this.descricao = descricao; return this; }
         public Builder valorOrcadoUsd(BigDecimal valorOrcadoUsd) { this.valorOrcadoUsd = valorOrcadoUsd; return this; }
         public Builder taxaCambioUsada(BigDecimal taxaCambioUsada) { this.taxaCambioUsada = taxaCambioUsada; return this; }
         public Builder observacoes(String observacoes) { this.observacoes = observacoes; return this; }
-        public ItemOrcamentoRequest build() { return new ItemOrcamentoRequest(eventoId, categoriaId, valorOrcadoUsd, taxaCambioUsada, observacoes); }
+        public ItemOrcamentoRequest build() { return new ItemOrcamentoRequest(eventoId, categoriaId, descricao, valorOrcadoUsd, taxaCambioUsada, observacoes); }
     }
 
     public Long getEventoId() { return eventoId; }
     public void setEventoId(Long eventoId) { this.eventoId = eventoId; }
     public Long getCategoriaId() { return categoriaId; }
     public void setCategoriaId(Long categoriaId) { this.categoriaId = categoriaId; }
+    public String getDescricao() { return descricao; }
+    public void setDescricao(String descricao) { this.descricao = descricao; }
     public BigDecimal getValorOrcadoUsd() { return valorOrcadoUsd; }
     public void setValorOrcadoUsd(BigDecimal valorOrcadoUsd) { this.valorOrcadoUsd = valorOrcadoUsd; }
     public BigDecimal getTaxaCambioUsada() { return taxaCambioUsada; }

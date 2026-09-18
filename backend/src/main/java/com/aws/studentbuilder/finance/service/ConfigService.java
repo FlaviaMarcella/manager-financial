@@ -74,7 +74,11 @@ public class ConfigService {
     }
 
     public CotacaoDolarDTO obterCotacaoMercadoAtual() {
-        return cotacaoMoedaService.obterCotacaoDolarAtual();
+        return cotacaoMoedaService.obterCotacaoDolarAtual(false);
+    }
+
+    public CotacaoDolarDTO obterCotacaoMercadoAtual(boolean forceRefresh) {
+        return cotacaoMoedaService.obterCotacaoDolarAtual(forceRefresh);
     }
 
     @Transactional(readOnly = true)

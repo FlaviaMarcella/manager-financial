@@ -96,7 +96,12 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
               <tr>
                 <td><strong>{{ item.eventoNome }}</strong></td>
                 <td>
-                  <span class="badge badge-navy">{{ item.categoriaNome }}</span>
+                  <div class="event-cat-cell">
+                    <span class="badge badge-navy">{{ item.categoriaNome }}</span>
+                    @if (item.descricao) {
+                      <span class="cat-tag"><strong>{{ item.descricao }}</strong></span>
+                    }
+                  </div>
                 </td>
                 <td><strong>US$ {{ item.valorOrcadoUsd | number:'1.2-2' }}</strong></td>
                 <td class="text-usd-gasto">US$ {{ (item.valorRealizadoUsd || 0) | number:'1.2-2' }}</td>
@@ -256,6 +261,13 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                     <span class="detail-label">Categoria de Despesa</span>
                     <span class="badge badge-navy">{{ selectedItemForDetails.categoriaNome }}</span>
                   </div>
+
+                  @if (selectedItemForDetails.descricao) {
+                    <div class="detail-item">
+                      <span class="detail-label">Descrição / Aporte</span>
+                      <strong class="detail-val">{{ selectedItemForDetails.descricao }}</strong>
+                    </div>
+                  }
 
                   <div class="detail-item">
                     <span class="detail-label">Data de Criação</span>
@@ -421,6 +433,12 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                     <option [ngValue]="cat.id">{{ cat.nome }}</option>
                   }
                 </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Descrição / Título do Aporte</label>
+                <input type="text" class="form-control" [(ngModel)]="formData.descricao" name="descricao" placeholder="Ex: Aporte Inicial AWS, Sobra DemoDay, Patrocínio Extra...">
+                <small class="text-muted" style="font-size: 0.75rem; margin-top: 0.25rem; display: block;">Opcional. Permite registrar e identificar múltiplos aportes para a mesma categoria.</small>
               </div>
 
               <div class="form-row">
@@ -1229,6 +1247,7 @@ export class OrcamentoComponent implements OnInit {
     this.formData = {
       eventoId: this.selectedEventoId || (this.eventos()[0]?.id ?? undefined),
       categoriaId: this.categorias()[0]?.id ?? undefined,
+      descricao: '',
       valorOrcadoUsd: 0,
       taxaCambioUsada: this.taxaAtual(),
       observacoes: ''
@@ -1242,6 +1261,7 @@ export class OrcamentoComponent implements OnInit {
     this.formData = {
       eventoId: item.eventoId,
       categoriaId: item.categoriaId,
+      descricao: item.descricao || '',
       valorOrcadoUsd: item.valorOrcadoUsd,
       taxaCambioUsada: item.taxaCambioUsada || this.taxaAtual(),
       observacoes: item.observacoes

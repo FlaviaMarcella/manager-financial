@@ -35,7 +35,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
             <div class="cambio-box market-box">
               <div class="box-top">
                 <span class="box-tag">🌐 Mercado Oficial Hoje</span>
-                <button type="button" class="btn btn-sm btn-outline btn-refresh" (click)="loadCotacaoMercado()" [disabled]="isLoadingCotacao()">
+                <button type="button" class="btn btn-sm btn-outline btn-refresh" (click)="loadCotacaoMercado(true)" [disabled]="isLoadingCotacao()">
                   {{ isLoadingCotacao() ? '...' : '🔄 Atualizar' }}
                 </button>
               </div>
@@ -691,15 +691,21 @@ export class ConfiguracoesComponent implements OnInit {
     this.loadStatus();
   }
 
-  loadCotacaoMercado() {
+  loadCotacaoMercado(force: boolean = false) {
     this.isLoadingCotacao.set(true);
-    this.api.getCotacaoDolarAtual().subscribe({
+    this.api.getCotacaoDolarAtual(force).subscribe({
       next: (data) => {
         this.cotacaoMercado.set(data);
         this.isLoadingCotacao.set(false);
+        if (force) {
+          this.toast.success('Cotação do Dólar atualizada em tempo real!');
+        }
       },
       error: () => {
         this.isLoadingCotacao.set(false);
+        if (force) {
+          this.toast.error('Erro ao atualizar cotação do dólar.');
+        }
       }
     });
   }

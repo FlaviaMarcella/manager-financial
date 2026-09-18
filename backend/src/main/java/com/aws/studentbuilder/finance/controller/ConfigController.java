@@ -40,8 +40,9 @@ public class ConfigController {
     @GetMapping("/cotacao-atual")
     @PreAuthorize("hasAnyRole('ADMIN', 'VIEWER')")
     @Operation(summary = "Obter cotação em tempo real do Dólar Comercial do dia")
-    public ResponseEntity<CotacaoDolarDTO> getCotacaoAtual() {
-        return ResponseEntity.ok(configService.obterCotacaoMercadoAtual());
+    public ResponseEntity<CotacaoDolarDTO> getCotacaoAtual(
+            @RequestParam(defaultValue = "false") boolean force) {
+        return ResponseEntity.ok(configService.obterCotacaoMercadoAtual(force));
     }
 
     @PostMapping("/sincronizar-cotacao")

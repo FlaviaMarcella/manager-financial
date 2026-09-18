@@ -23,7 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class OrcamentoService {
@@ -78,11 +81,6 @@ public class OrcamentoService {
         Categoria categoria = categoriaRepository.findById(request.getCategoriaId())
                 .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada com ID: " + request.getCategoriaId()));
 
-        itemOrcamentoRepository.findByEventoIdAndCategoriaId(request.getEventoId(), request.getCategoriaId())
-                .ifPresent(i -> {
-                    throw new IllegalArgumentException("Já existe um orçamento cadastrado para este evento e categoria.");
-                });
-
         BigDecimal taxa = (request.getTaxaCambioUsada() != null && request.getTaxaCambioUsada().compareTo(BigDecimal.ZERO) > 0)
                 ? request.getTaxaCambioUsada()
                 : configService.getTaxaCambioAtual();
@@ -90,6 +88,7 @@ public class OrcamentoService {
         ItemOrcamento item = ItemOrcamento.builder()
                 .evento(evento)
                 .categoria(categoria)
+                .descricao(request.getDescricao())
                 .valorOrcadoUsd(request.getValorOrcadoUsd())
                 .taxaCambioUsada(taxa)
                 .observacoes(request.getObservacoes())
@@ -109,15 +108,9 @@ public class OrcamentoService {
         Categoria categoria = categoriaRepository.findById(request.getCategoriaId())
                 .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada com ID: " + request.getCategoriaId()));
 
-        itemOrcamentoRepository.findByEventoIdAndCategoriaId(request.getEventoId(), request.getCategoriaId())
-                .ifPresent(existing -> {
-                    if (!existing.getId().equals(id)) {
-                        throw new IllegalArgumentException("Já existe outro orçamento cadastrado para este evento e categoria.");
-                    }
-                });
-
         item.setEvento(evento);
         item.setCategoria(categoria);
+        item.setDescricao(request.getDescricao());
         item.setValorOrcadoUsd(request.getValorOrcadoUsd());
         if (request.getTaxaCambioUsada() != null && request.getTaxaCambioUsada().compareTo(BigDecimal.ZERO) > 0) {
             item.setTaxaCambioUsada(request.getTaxaCambioUsada());
@@ -154,11 +147,19 @@ public class OrcamentoService {
         Categoria categoriaDestino = categoriaRepository.findById(request.getCategoriaDestinoId())
                 .orElseThrow(() -> new IllegalArgumentException("Categoria de destino não encontrada com ID: " + request.getCategoriaDestinoId()));
 
-        ItemOrcamento itemOrigem = itemOrcamentoRepository.findByEventoIdAndCategoriaId(
+        List<ItemOrcamento> itensOrigem = itemOrcamentoRepository.findByEventoIdAndCategoriaId(
                 request.getEventoOrigemId(), request.getCategoriaOrigemId()
-        ).orElseThrow(() -> new IllegalArgumentException("Não há orçamento cadastrado para a categoria de origem no evento selecionado."));
+        );
 
-        BigDecimal taxaOrigem = itemOrigem.getTaxaCambioUsada() != null ? itemOrigem.getTaxaCambioUsada() : configService.getTaxaCambioAtual();
+        if (itensOrigem.isEmpty()) {
+            throw new IllegalArgumentException("Não há orçamento cadastrado para a categoria de origem no evento selecionado.");
+        }
+
+        BigDecimal totalOrcadoOrigemUsd = itensOrigem.stream()
+                .map(ItemOrcamento::getValorOrcadoUsd)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal taxaOrigem = itensOrigem.get(0).getTaxaCambioUsada() != null ? itensOrigem.get(0).getTaxaCambioUsada() : configService.getTaxaCambioAtual();
         BigDecimal gastoUsd = lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(request.getEventoOrigemId(), request.getCategoriaOrigemId());
         if (gastoUsd == null) {
             BigDecimal gastoBrl = lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(request.getEventoOrigemId(), request.getCategoriaOrigemId());
@@ -167,7 +168,7 @@ public class OrcamentoService {
                     : BigDecimal.ZERO;
         }
 
-        BigDecimal saldoDisponivelUsd = itemOrigem.getValorOrcadoUsd().subtract(gastoUsd).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal saldoDisponivelUsd = totalOrcadoOrigemUsd.subtract(gastoUsd).setScale(2, RoundingMode.HALF_UP);
 
         if (request.getValorUsd().compareTo(saldoDisponivelUsd) > 0) {
             throw new IllegalArgumentException(String.format(
@@ -176,29 +177,36 @@ public class OrcamentoService {
             ));
         }
 
-        // 1. Deduz do item de origem
-        itemOrigem.setValorOrcadoUsd(itemOrigem.getValorOrcadoUsd().subtract(request.getValorUsd()));
-        itemOrcamentoRepository.save(itemOrigem);
+        // 1. Deduz do(s) item(ns) de origem
+        BigDecimal restanteADeduzir = request.getValorUsd();
+        for (ItemOrcamento itemOrigem : itensOrigem) {
+            if (restanteADeduzir.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal valorItem = itemOrigem.getValorOrcadoUsd();
+            if (valorItem.compareTo(restanteADeduzir) >= 0) {
+                itemOrigem.setValorOrcadoUsd(valorItem.subtract(restanteADeduzir));
+                restanteADeduzir = BigDecimal.ZERO;
+            } else {
+                itemOrigem.setValorOrcadoUsd(BigDecimal.ZERO);
+                restanteADeduzir = restanteADeduzir.subtract(valorItem);
+            }
+            itemOrcamentoRepository.save(itemOrigem);
+        }
 
-        // 2. Incrementa ou cria item no evento de destino
+        // 2. Cria item de aporte no evento de destino
         BigDecimal taxaAtual = (request.getTaxaCambio() != null && request.getTaxaCambio().compareTo(BigDecimal.ZERO) > 0)
                 ? request.getTaxaCambio()
                 : configService.getTaxaCambioAtual();
 
-        ItemOrcamento itemDestino = itemOrcamentoRepository.findByEventoIdAndCategoriaId(
-                request.getEventoDestinoId(), request.getCategoriaDestinoId()
-        ).orElseGet(() -> ItemOrcamento.builder()
+        ItemOrcamento novoItemDestino = ItemOrcamento.builder()
                 .evento(eventoDestino)
                 .categoria(categoriaDestino)
-                .valorOrcadoUsd(BigDecimal.ZERO)
+                .descricao("Transferência de Sobra: " + eventoOrigem.getNome())
+                .valorOrcadoUsd(request.getValorUsd())
                 .taxaCambioUsada(taxaAtual)
-                .observacoes("Criado a partir de transferência de sobra orçamentária")
-                .build()
-        );
+                .observacoes(request.getMotivo())
+                .build();
 
-        itemDestino.setValorOrcadoUsd(itemDestino.getValorOrcadoUsd().add(request.getValorUsd()));
-        itemDestino.setTaxaCambioUsada(taxatual(itemDestino, taxaAtual));
-        itemOrcamentoRepository.save(itemDestino);
+        itemOrcamentoRepository.save(novoItemDestino);
 
         // 3. Registra auditoria da transferência
         BigDecimal valorBrl = request.getValorUsd().multiply(taxaAtual).setScale(2, RoundingMode.HALF_UP);
@@ -222,12 +230,6 @@ public class OrcamentoService {
         return toTransferenciaDTO(salvo);
     }
 
-    private BigDecimal taxatual(ItemOrcamento item, BigDecimal taxaAtual) {
-        return (item.getTaxaCambioUsada() != null && item.getTaxaCambioUsada().compareTo(BigDecimal.ZERO) > 0)
-                ? item.getTaxaCambioUsada()
-                : taxaAtual;
-    }
-
     @Transactional(readOnly = true)
     public List<TransferenciaOrcamentoDTO> listarTransferencias(Long eventoId) {
         return transferenciaRepository.findByEventoId(eventoId).stream()
@@ -238,25 +240,39 @@ public class OrcamentoService {
     @Transactional(readOnly = true)
     public List<CategoriaSaldoDisponivelDTO> obterSaldosDisponiveis(Long eventoId) {
         List<ItemOrcamento> itens = itemOrcamentoRepository.findByEventoId(eventoId);
+        Map<Long, List<ItemOrcamento>> itensPorCategoria = itens.stream()
+                .collect(Collectors.groupingBy(i -> i.getCategoria().getId(), LinkedHashMap::new, Collectors.toList()));
+
         List<CategoriaSaldoDisponivelDTO> saldos = new ArrayList<>();
 
-        for (ItemOrcamento item : itens) {
-            BigDecimal taxa = item.getTaxaCambioUsada() != null ? item.getTaxaCambioUsada() : configService.getTaxaCambioAtual();
-            BigDecimal gastoUsd = lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(eventoId, item.getCategoria().getId());
+        for (Map.Entry<Long, List<ItemOrcamento>> entry : itensPorCategoria.entrySet()) {
+            Long categoriaId = entry.getKey();
+            List<ItemOrcamento> itensCat = entry.getValue();
+            Categoria categoria = itensCat.get(0).getCategoria();
+
+            BigDecimal totalOrcadoUsd = itensCat.stream()
+                    .map(ItemOrcamento::getValorOrcadoUsd)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal taxaReferencia = itensCat.get(0).getTaxaCambioUsada() != null 
+                    ? itensCat.get(0).getTaxaCambioUsada() 
+                    : configService.getTaxaCambioAtual();
+
+            BigDecimal gastoUsd = lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(eventoId, categoriaId);
             if (gastoUsd == null) {
-                BigDecimal gastoBrl = lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(eventoId, item.getCategoria().getId());
-                gastoUsd = (gastoBrl != null && taxa.compareTo(BigDecimal.ZERO) > 0)
-                        ? gastoBrl.divide(taxa, 2, RoundingMode.HALF_UP)
+                BigDecimal gastoBrl = lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(eventoId, categoriaId);
+                gastoUsd = (gastoBrl != null && taxaReferencia.compareTo(BigDecimal.ZERO) > 0)
+                        ? gastoBrl.divide(taxaReferencia, 2, RoundingMode.HALF_UP)
                         : BigDecimal.ZERO;
             }
 
-            BigDecimal saldoUsd = item.getValorOrcadoUsd().subtract(gastoUsd).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal saldoBrl = saldoUsd.multiply(taxa).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal saldoUsd = totalOrcadoUsd.subtract(gastoUsd).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal saldoBrl = saldoUsd.multiply(taxaReferencia).setScale(2, RoundingMode.HALF_UP);
 
             saldos.add(CategoriaSaldoDisponivelDTO.builder()
-                    .categoriaId(item.getCategoria().getId())
-                    .categoriaNome(item.getCategoria().getNome())
-                    .valorOrcadoUsd(item.getValorOrcadoUsd())
+                    .categoriaId(categoria.getId())
+                    .categoriaNome(categoria.getNome())
+                    .valorOrcadoUsd(totalOrcadoUsd)
                     .valorGastoUsd(gastoUsd)
                     .saldoDisponivelUsd(saldoUsd)
                     .saldoDisponivelBrl(saldoBrl)
@@ -292,26 +308,35 @@ public class OrcamentoService {
         BigDecimal valorOrcadoUsd = item.getValorOrcadoUsd() != null ? item.getValorOrcadoUsd() : BigDecimal.ZERO;
         BigDecimal valorOrcadoBrl = valorOrcadoUsd.multiply(taxa).setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal valorRealizadoUsd = lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(
+        BigDecimal totalOrcadoCatUsd = itemOrcamentoRepository.sumOrcadoUsdByEventoIdAndCategoriaId(
                 item.getEvento().getId(), item.getCategoria().getId()
         );
 
-        BigDecimal valorRealizadoBrl = lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(
+        BigDecimal gastoTotalUsd = lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(
                 item.getEvento().getId(), item.getCategoria().getId()
         );
-        if (valorRealizadoBrl == null) {
-            valorRealizadoBrl = BigDecimal.ZERO;
+        BigDecimal gastoTotalBrl = lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(
+                item.getEvento().getId(), item.getCategoria().getId()
+        );
+        if (gastoTotalBrl == null) {
+            gastoTotalBrl = BigDecimal.ZERO;
         }
-        valorRealizadoBrl = valorRealizadoBrl.setScale(2, RoundingMode.HALF_UP);
 
-        if (valorRealizadoUsd == null) {
-            if (valorRealizadoBrl.compareTo(BigDecimal.ZERO) > 0 && taxa.compareTo(BigDecimal.ZERO) > 0) {
-                valorRealizadoUsd = valorRealizadoBrl.divide(taxa, 2, RoundingMode.HALF_UP);
+        if (gastoTotalUsd == null) {
+            if (gastoTotalBrl.compareTo(BigDecimal.ZERO) > 0 && taxa.compareTo(BigDecimal.ZERO) > 0) {
+                gastoTotalUsd = gastoTotalBrl.divide(taxa, 2, RoundingMode.HALF_UP);
             } else {
-                valorRealizadoUsd = BigDecimal.ZERO;
+                gastoTotalUsd = BigDecimal.ZERO;
             }
         }
-        valorRealizadoUsd = valorRealizadoUsd.setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal prop = BigDecimal.ONE;
+        if (totalOrcadoCatUsd != null && totalOrcadoCatUsd.compareTo(BigDecimal.ZERO) > 0) {
+            prop = valorOrcadoUsd.divide(totalOrcadoCatUsd, 6, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal valorRealizadoUsd = gastoTotalUsd.multiply(prop).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal valorRealizadoBrl = gastoTotalBrl.multiply(prop).setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal saldoUsd = valorOrcadoUsd.subtract(valorRealizadoUsd).setScale(2, RoundingMode.HALF_UP);
         BigDecimal saldoBrl = saldoUsd.multiply(taxa).setScale(2, RoundingMode.HALF_UP);
@@ -329,6 +354,7 @@ public class OrcamentoService {
                 .eventoNome(item.getEvento().getNome())
                 .categoriaId(item.getCategoria().getId())
                 .categoriaNome(item.getCategoria().getNome())
+                .descricao(item.getDescricao())
                 .valorOrcadoUsd(valorOrcadoUsd)
                 .taxaCambioUsada(item.getTaxaCambioUsada())
                 .valorOrcadoBrl(valorOrcadoBrl)

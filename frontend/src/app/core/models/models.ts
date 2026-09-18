@@ -57,6 +57,7 @@ export interface ItemOrcamento {
   eventoNome?: string;
   categoriaId: number;
   categoriaNome?: string;
+  descricao?: string;
   valorOrcadoUsd: number;
   taxaCambioUsada?: number;
   valorOrcadoBrl?: number;

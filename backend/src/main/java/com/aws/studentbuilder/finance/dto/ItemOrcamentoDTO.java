@@ -9,6 +9,7 @@ public class ItemOrcamentoDTO {
     private String eventoNome;
     private Long categoriaId;
     private String categoriaNome;
+    private String descricao;
     private BigDecimal valorOrcadoUsd;
     private BigDecimal taxaCambioUsada;
     private BigDecimal valorOrcadoBrl;
@@ -23,7 +24,7 @@ public class ItemOrcamentoDTO {
     public ItemOrcamentoDTO() {}
 
     public ItemOrcamentoDTO(Long id, Long eventoId, String eventoNome, Long categoriaId, String categoriaNome,
-                            BigDecimal valorOrcadoUsd, BigDecimal taxaCambioUsada, BigDecimal valorOrcadoBrl,
+                            String descricao, BigDecimal valorOrcadoUsd, BigDecimal taxaCambioUsada, BigDecimal valorOrcadoBrl,
                             BigDecimal valorRealizadoUsd, BigDecimal saldoUsd,
                             BigDecimal valorRealizadoBrl, BigDecimal saldoBrl, BigDecimal taxaRetidaTotal,
                             String observacoes, OffsetDateTime criadoEm) {
@@ -32,6 +33,7 @@ public class ItemOrcamentoDTO {
         this.eventoNome = eventoNome;
         this.categoriaId = categoriaId;
         this.categoriaNome = categoriaNome;
+        this.descricao = descricao;
         this.valorOrcadoUsd = valorOrcadoUsd;
         this.taxaCambioUsada = taxaCambioUsada;
         this.valorOrcadoBrl = valorOrcadoBrl;
@@ -52,6 +54,7 @@ public class ItemOrcamentoDTO {
         private String eventoNome;
         private Long categoriaId;
         private String categoriaNome;
+        private String descricao;
         private BigDecimal valorOrcadoUsd;
         private BigDecimal taxaCambioUsada;
         private BigDecimal valorOrcadoBrl;
@@ -68,6 +71,7 @@ public class ItemOrcamentoDTO {
         public Builder eventoNome(String eventoNome) { this.eventoNome = eventoNome; return this; }
         public Builder categoriaId(Long categoriaId) { this.categoriaId = categoriaId; return this; }
         public Builder categoriaNome(String categoriaNome) { this.categoriaNome = categoriaNome; return this; }
+        public Builder descricao(String descricao) { this.descricao = descricao; return this; }
         public Builder valorOrcadoUsd(BigDecimal valorOrcadoUsd) { this.valorOrcadoUsd = valorOrcadoUsd; return this; }
         public Builder taxaCambioUsada(BigDecimal taxaCambioUsada) { this.taxaCambioUsada = taxaCambioUsada; return this; }
         public Builder valorOrcadoBrl(BigDecimal valorOrcadoBrl) { this.valorOrcadoBrl = valorOrcadoBrl; return this; }
@@ -79,7 +83,7 @@ public class ItemOrcamentoDTO {
         public Builder observacoes(String observacoes) { this.observacoes = observacoes; return this; }
         public Builder criadoEm(OffsetDateTime criadoEm) { this.criadoEm = criadoEm; return this; }
         public ItemOrcamentoDTO build() {
-            return new ItemOrcamentoDTO(id, eventoId, eventoNome, categoriaId, categoriaNome, valorOrcadoUsd, taxaCambioUsada, valorOrcadoBrl, valorRealizadoUsd, saldoUsd, valorRealizadoBrl, saldoBrl, taxaRetidaTotal, observacoes, criadoEm);
+            return new ItemOrcamentoDTO(id, eventoId, eventoNome, categoriaId, categoriaNome, descricao, valorOrcadoUsd, taxaCambioUsada, valorOrcadoBrl, valorRealizadoUsd, saldoUsd, valorRealizadoBrl, saldoBrl, taxaRetidaTotal, observacoes, criadoEm);
         }
     }
 
@@ -93,6 +97,8 @@ public class ItemOrcamentoDTO {
     public void setCategoriaId(Long categoriaId) { this.categoriaId = categoriaId; }
     public String getCategoriaNome() { return categoriaNome; }
     public void setCategoriaNome(String categoriaNome) { this.categoriaNome = categoriaNome; }
+    public String getDescricao() { return descricao; }
+    public void setDescricao(String descricao) { this.descricao = descricao; }
     public BigDecimal getValorOrcadoUsd() { return valorOrcadoUsd; }
     public void setValorOrcadoUsd(BigDecimal valorOrcadoUsd) { this.valorOrcadoUsd = valorOrcadoUsd; }
     public BigDecimal getTaxaCambioUsada() { return taxaCambioUsada; }

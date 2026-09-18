@@ -95,8 +95,12 @@ export class ApiService {
     return this.http.put<ConfiguracaoGlobal>(`${this.baseUrl}/config`, config);
   }
 
-  getCotacaoDolarAtual(): Observable<CotacaoDolar> {
-    return this.http.get<CotacaoDolar>(`${this.baseUrl}/config/cotacao-atual`);
+  getCotacaoDolarAtual(force: boolean = false): Observable<CotacaoDolar> {
+    let params = new HttpParams();
+    if (force) {
+      params = params.set('force', 'true');
+    }
+    return this.http.get<CotacaoDolar>(`${this.baseUrl}/config/cotacao-atual`, { params });
   }
 
   sincronizarCotacaoDolar(spreadPercentual?: number): Observable<ConfiguracaoGlobal> {

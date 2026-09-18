@@ -8,12 +8,11 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface ItemOrcamentoRepository extends JpaRepository<ItemOrcamento, Long> {
     List<ItemOrcamento> findByEventoId(Long eventoId);
-    Optional<ItemOrcamento> findByEventoIdAndCategoriaId(Long eventoId, Long categoriaId);
+    List<ItemOrcamento> findByEventoIdAndCategoriaId(Long eventoId, Long categoriaId);
 
     @Query("SELECT SUM(i.valorOrcadoUsd * i.taxaCambioUsada) FROM ItemOrcamento i")
     BigDecimal sumTotalOrcadoBrl();
@@ -23,4 +22,10 @@ public interface ItemOrcamentoRepository extends JpaRepository<ItemOrcamento, Lo
 
     @Query("SELECT SUM(i.valorOrcadoUsd * i.taxaCambioUsada) FROM ItemOrcamento i WHERE i.evento.id = :eventoId")
     BigDecimal sumOrcadoBrlByEventoId(@Param("eventoId") Long eventoId);
+
+    @Query("SELECT SUM(i.valorOrcadoUsd) FROM ItemOrcamento i WHERE i.evento.id = :eventoId AND i.categoria.id = :categoriaId")
+    BigDecimal sumOrcadoUsdByEventoIdAndCategoriaId(@Param("eventoId") Long eventoId, @Param("categoriaId") Long categoriaId);
+
+    @Query("SELECT SUM(i.valorOrcadoUsd * i.taxaCambioUsada) FROM ItemOrcamento i WHERE i.evento.id = :eventoId AND i.categoria.id = :categoriaId")
+    BigDecimal sumOrcadoBrlByEventoIdAndCategoriaId(@Param("eventoId") Long eventoId, @Param("categoriaId") Long categoriaId);
 }
