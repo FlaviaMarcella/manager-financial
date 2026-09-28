@@ -128,14 +128,23 @@ public class PdfRelatorioService {
         document.add(hr);
 
         // --- CARDS DE SUMÁRIO EXECUTIVO (KPIs) ---
-        PdfPTable kpiTable = new PdfPTable(4);
+        boolean temTaxasRetidas = r.totalTaxasRetidasBrl() != null && r.totalTaxasRetidasBrl().compareTo(BigDecimal.ZERO) > 0;
+        PdfPTable kpiTable = new PdfPTable(temTaxasRetidas ? 5 : 4);
         kpiTable.setWidthPercentage(100);
-        kpiTable.setWidths(new float[]{25, 25, 25, 25});
+        if (temTaxasRetidas) {
+            kpiTable.setWidths(new float[]{21, 21, 19, 19, 20});
+        } else {
+            kpiTable.setWidths(new float[]{25, 25, 25, 25});
+        }
         kpiTable.setSpacingAfter(12);
 
         adicionarKpiCard(kpiTable, "ORÇAMENTO APROVADO", "R$ " + BRL_FORMAT.format(r.totalOrcadoBrl()), "US$ " + USD_FORMAT.format(r.totalOrcadoUsd()), COLOR_NAVY);
         adicionarKpiCard(kpiTable, "TOTAL REALIZADO", "R$ " + BRL_FORMAT.format(r.totalRealizadoBrl()), "US$ " + USD_FORMAT.format(r.totalRealizadoUsd()), COLOR_AMBER_DARK);
         
+        if (temTaxasRetidas) {
+            adicionarKpiCard(kpiTable, "TAXAS / SPREAD", "-R$ " + BRL_FORMAT.format(r.totalTaxasRetidasBrl()), "Perda cambial", COLOR_AMBER_DARK);
+        }
+
         Color saldoColor = r.saldoRestanteBrl().compareTo(BigDecimal.ZERO) >= 0 ? COLOR_MINT : COLOR_DANGER;
         adicionarKpiCard(kpiTable, "SALDO REMANESCENTE", "R$ " + BRL_FORMAT.format(r.saldoRestanteBrl()), "US$ " + USD_FORMAT.format(r.saldoRestanteUsd()), saldoColor);
         
@@ -147,12 +156,12 @@ public class PdfRelatorioService {
         // --- SEÇÃO 1: DOTAÇÃO ORÇAMENTÁRIA POR CATEGORIA ---
         adicionarSecaoTitulo(document, "1. Dotação Orçamentária por Categoria");
 
-        PdfPTable orcTable = new PdfPTable(6);
+        PdfPTable orcTable = new PdfPTable(7);
         orcTable.setWidthPercentage(100);
-        orcTable.setWidths(new float[]{28, 14, 14, 15, 15, 14});
+        orcTable.setWidths(new float[]{25, 13, 12, 13, 13, 12, 12});
         orcTable.setSpacingAfter(12);
 
-        adicionarHeaderTabela(orcTable, new String[]{"Categoria", "Orçado (USD)", "Câmbio", "Orçado (BRL)", "Gasto (BRL)", "Saldo (BRL)"});
+        adicionarHeaderTabela(orcTable, new String[]{"Categoria", "Orçado (USD)", "Câmbio", "Orçado (BRL)", "Gasto (BRL)", "Taxa/Spread", "Saldo (BRL)"});
 
         boolean alt = false;
         for (ItemOrcamentoDTO item : r.itensOrcamento()) {
@@ -165,12 +174,16 @@ public class PdfRelatorioService {
             adicionarCelula(orcTable, "R$ " + BRL_FORMAT.format(item.getValorOrcadoBrl()), FontFactory.HELVETICA, 8, COLOR_NAVY, bg, Element.ALIGN_RIGHT);
             adicionarCelula(orcTable, "R$ " + BRL_FORMAT.format(item.getValorRealizadoBrl() != null ? item.getValorRealizadoBrl() : BigDecimal.ZERO), FontFactory.HELVETICA, 8, COLOR_AMBER_DARK, bg, Element.ALIGN_RIGHT);
             
+            BigDecimal taxaRet = item.getTaxaRetidaTotal() != null ? item.getTaxaRetidaTotal() : BigDecimal.ZERO;
+            String taxaRetStr = taxaRet.compareTo(BigDecimal.ZERO) > 0 ? "-R$ " + BRL_FORMAT.format(taxaRet) : "—";
+            adicionarCelula(orcTable, taxaRetStr, FontFactory.HELVETICA, 7.5f, taxaRet.compareTo(BigDecimal.ZERO) > 0 ? COLOR_AMBER_DARK : COLOR_TEXT_MUTED, bg, Element.ALIGN_RIGHT);
+
             BigDecimal saldo = item.getSaldoBrl() != null ? item.getSaldoBrl() : BigDecimal.ZERO;
             Color saldoTxt = saldo.compareTo(BigDecimal.ZERO) >= 0 ? COLOR_MINT : COLOR_DANGER;
             adicionarCelula(orcTable, "R$ " + BRL_FORMAT.format(saldo), FontFactory.HELVETICA_BOLD, 8, saldoTxt, bg, Element.ALIGN_RIGHT);
         }
         if (r.itensOrcamento().isEmpty()) {
-            adicionarLinhaVazia(orcTable, 6, "Nenhum orçamento cadastrado para este evento.");
+            adicionarLinhaVazia(orcTable, 7, "Nenhum orçamento cadastrado para este evento.");
         }
         document.add(orcTable);
 

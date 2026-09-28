@@ -64,6 +64,9 @@ class RelatorioServiceTest {
                 .valorOrcadoUsd(new BigDecimal("200.00"))
                 .valorOrcadoBrl(new BigDecimal("1000.00"))
                 .taxaCambioUsada(new BigDecimal("5.0000"))
+                .saldoUsd(new BigDecimal("120.00"))
+                .saldoBrl(new BigDecimal("600.00"))
+                .taxaRetidaTotal(BigDecimal.ZERO)
                 .build();
 
         LancamentoDTO lancamento = LancamentoDTO.builder()

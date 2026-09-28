@@ -94,8 +94,17 @@ public class RelatorioService {
                 .map(l -> l.getValorUsd() != null ? l.getValorUsd() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal saldoRestanteUsd = totalOrcadoUsd.subtract(totalRealizadoUsd).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal saldoRestanteBrl = totalOrcadoBrl.subtract(totalRealizadoBrl).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalTaxasRetidasBrl = itensOrcamento.stream()
+                .map(i -> i.getTaxaRetidaTotal() != null ? i.getTaxaRetidaTotal() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal saldoRestanteUsd = itensOrcamento.stream()
+                .map(i -> i.getSaldoUsd() != null ? i.getSaldoUsd() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal saldoRestanteBrl = itensOrcamento.stream()
+                .map(i -> i.getSaldoBrl() != null ? i.getSaldoBrl() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         double percentualExecucao = 0.0;
         if (totalOrcadoUsd.compareTo(BigDecimal.ZERO) > 0) {
@@ -121,6 +130,7 @@ public class RelatorioService {
                 totalOrcadoBrl,
                 totalRealizadoUsd,
                 totalRealizadoBrl,
+                totalTaxasRetidasBrl,
                 saldoRestanteBrl,
                 saldoRestanteUsd,
                 percentualExecucao,
@@ -266,9 +276,11 @@ public class RelatorioService {
         writer.newLine();
         writer.write("Total Realizado / Gasto (USD):;US$ " + USD_FORMAT.format(r.totalRealizadoUsd()));
         writer.newLine();
-        writer.write("Saldo Restante (BRL):;R$ " + BRL_FORMAT.format(r.saldoRestanteBrl()));
+        writer.write("Taxas / Spread Cambial Retido (BRL):;R$ " + BRL_FORMAT.format(r.totalTaxasRetidasBrl() != null ? r.totalTaxasRetidasBrl() : BigDecimal.ZERO));
         writer.newLine();
-        writer.write("Saldo Restante (USD):;US$ " + USD_FORMAT.format(r.saldoRestanteUsd()));
+        writer.write("Saldo Restante Disponivel (BRL):;R$ " + BRL_FORMAT.format(r.saldoRestanteBrl()));
+        writer.newLine();
+        writer.write("Saldo Restante Disponivel (USD):;US$ " + USD_FORMAT.format(r.saldoRestanteUsd()));
         writer.newLine();
         writer.write("Execucao Orcamentaria:;" + String.format(Locale.US, "%.2f", r.percentualExecucao()) + "%");
         writer.newLine();
@@ -281,15 +293,16 @@ public class RelatorioService {
         // TABELA 1: ORÇAMENTO POR CATEGORIA
         writer.write("--- 1. PLANEJAMENTO ORCAMENTARIO POR CATEGORIA ---");
         writer.newLine();
-        writer.write("Categoria;Orcado (USD);Taxa Cambio Usada;Orcado (BRL);Gasto Realizado (BRL);Saldo Categoria (BRL)");
+        writer.write("Categoria;Orcado (USD);Taxa Cambio Usada;Orcado (BRL);Gasto Realizado (BRL);Taxas/Spread Retido (BRL);Saldo Categoria (BRL)");
         writer.newLine();
         for (ItemOrcamentoDTO item : r.itensOrcamento()) {
-            writer.write(String.format("%s;US$ %s;R$ %s;R$ %s;R$ %s;R$ %s",
+            writer.write(String.format("%s;US$ %s;R$ %s;R$ %s;R$ %s;R$ %s;R$ %s",
                     escapeCsv(item.getCategoriaNome()),
                     USD_FORMAT.format(item.getValorOrcadoUsd() != null ? item.getValorOrcadoUsd() : BigDecimal.ZERO),
                     item.getTaxaCambioUsada() != null ? item.getTaxaCambioUsada().setScale(4, RoundingMode.HALF_UP) : "5.5000",
                     BRL_FORMAT.format(item.getValorOrcadoBrl() != null ? item.getValorOrcadoBrl() : BigDecimal.ZERO),
                     BRL_FORMAT.format(item.getValorRealizadoBrl() != null ? item.getValorRealizadoBrl() : BigDecimal.ZERO),
+                    BRL_FORMAT.format(item.getTaxaRetidaTotal() != null ? item.getTaxaRetidaTotal() : BigDecimal.ZERO),
                     BRL_FORMAT.format(item.getSaldoBrl() != null ? item.getSaldoBrl() : BigDecimal.ZERO)
             ));
             writer.newLine();

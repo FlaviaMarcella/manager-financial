@@ -15,6 +15,7 @@ public record RelatorioEventoDTO(
         BigDecimal totalOrcadoBrl,
         BigDecimal totalRealizadoUsd,
         BigDecimal totalRealizadoBrl,
+        BigDecimal totalTaxasRetidasBrl,
         BigDecimal saldoRestanteBrl,
         BigDecimal saldoRestanteUsd,
         double percentualExecucao,

@@ -164,6 +164,7 @@ export interface RelatorioEvento {
   totalOrcadoBrl: number;
   totalRealizadoUsd: number;
   totalRealizadoBrl: number;
+  totalTaxasRetidasBrl?: number;
   saldoRestanteBrl: number;
   saldoRestanteUsd: number;
   percentualExecucao: number;

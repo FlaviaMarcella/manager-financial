@@ -149,6 +149,14 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
             <small class="kpi-sub">US$ {{ r.totalRealizadoUsd | number:'1.2-2' }}</small>
           </div>
 
+          @if ((r.totalTaxasRetidasBrl || 0) > 0) {
+            <div class="card kpi-card">
+              <span class="kpi-label">Taxas / Spread Retido</span>
+              <div class="kpi-value text-amber">-{{ r.totalTaxasRetidasBrl | currencyBrl }}</div>
+              <small class="kpi-sub">Perda cambial de conversão</small>
+            </div>
+          }
+
           <div class="card kpi-card" [class.kpi-danger]="r.saldoRestanteBrl < 0">
             <span class="kpi-label">Saldo Restante</span>
             <div class="kpi-value" [class.text-mint]="r.saldoRestanteBrl >= 0" [class.text-danger]="r.saldoRestanteBrl < 0">
@@ -176,6 +184,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                   <th>Taxa Câmbio Usada</th>
                   <th>Orçado (BRL)</th>
                   <th>Gasto Realizado (BRL)</th>
+                  <th>Taxa/Spread Retido (BRL)</th>
                   <th>Saldo Categoria (BRL)</th>
                 </tr>
               </thead>
@@ -187,13 +196,20 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                     <td>R$ {{ item.taxaCambioUsada | number:'1.4-4' }}</td>
                     <td><strong>{{ item.valorOrcadoBrl | currencyBrl }}</strong></td>
                     <td class="text-amber">{{ (item.valorRealizadoBrl || 0) | currencyBrl }}</td>
+                    <td>
+                      @if ((item.taxaRetidaTotal || 0) > 0) {
+                        <span class="text-amber">-{{ item.taxaRetidaTotal | currencyBrl }}</span>
+                      } @else {
+                        <span class="text-muted">—</span>
+                      }
+                    </td>
                     <td [class.text-mint]="(item.saldoBrl || 0) >= 0" [class.text-danger]="(item.saldoBrl || 0) < 0">
                       <strong>{{ (item.saldoBrl || 0) | currencyBrl }}</strong>
                     </td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="6" class="empty-state">Nenhum orçamento cadastrado para este evento.</td>
+                    <td colspan="7" class="empty-state">Nenhum orçamento cadastrado para este evento.</td>
                   </tr>
                 }
               </tbody>
