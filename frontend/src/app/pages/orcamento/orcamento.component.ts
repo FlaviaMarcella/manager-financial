@@ -88,7 +88,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
               <th>Orçado (USD)</th>
               <th>Gasto (USD)</th>
               <th>Saldo (USD)</th>
-              <th>Câmbio do Momento</th>
+              <th>Câmbio (Efetivo / Atual)</th>
               <th>Orçado (BRL)</th>
               <th>Pago (BRL)</th>
               <th>Saldo (BRL)</th>
@@ -117,10 +117,14 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                   </span>
                 </td>
                 <td>
+                  @let cInfo = getCambioDisplay(item);
                   <div class="cambio-cell">
-                    <strong class="cambio-live">R$ {{ (cotacaoMercado()?.cotacaoOficial || item.taxaCambioUsada || taxaAtual()) | number:'1.4-4' }}</strong>
-                    @if (item.taxaCambioUsada && cotacaoMercado()?.cotacaoOficial && item.taxaCambioUsada !== cotacaoMercado()?.cotacaoOficial) {
-                      <small class="cambio-sub-base" title="Taxa base cadastrada no aporte">Base: R$ {{ item.taxaCambioUsada | number:'1.4-4' }}</small>
+                    <strong class="cambio-live">R$ {{ cInfo.taxa | number:'1.4-4' }}</strong>
+                    <span class="cambio-sub-tag" [ngClass]="'tag-' + cInfo.tipo.toLowerCase()" [title]="getCambioTooltip(item, cInfo)">
+                      {{ cInfo.rotulo }}
+                    </span>
+                    @if (cInfo.tipo !== 'MOMENTO' && item.taxaCambioUsada && item.taxaCambioUsada !== cInfo.taxa) {
+                      <small class="cambio-sub-base" title="Taxa orçada no cadastro do aporte">Base: R$ {{ item.taxaCambioUsada | number:'1.4-4' }}</small>
                     }
                   </div>
                 </td>
@@ -322,17 +326,35 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                   </div>
                 </div>
 
-                @if (cotacaoMercado()?.cotacaoOficial) {
-                  <div class="market-comparison-bar">
-                    <div class="comparison-header">
-                      <span class="icon">📊</span>
-                      <strong>Referência do Mercado Hoje:</strong>
-                    </div>
-                    <div class="comparison-body">
-                      <span>Valor correspondente na cotação oficial hoje (R$ {{ cotacaoMercado()?.cotacaoOficial | number:'1.4-4' }}): <strong>{{ ((selectedItemForDetails.valorOrcadoUsd || 0) * (cotacaoMercado()?.cotacaoOficial || 1)) | currencyBrl }}</strong></span>
-                    </div>
+                <div class="cambio-breakdown-card">
+                  <div class="cb-header">
+                    <span class="icon">💱</span>
+                    <strong>Análise de Câmbio & Cotações</strong>
                   </div>
-                }
+                  <div class="cb-grid">
+                    <div class="cb-item">
+                      <span class="cb-label">Taxa Base Orçada:</span>
+                      <strong>R$ {{ (selectedItemForDetails.taxaCambioUsada || taxaAtual()) | number:'1.4-4' }}</strong>
+                    </div>
+                    @if ((selectedItemForDetails.valorRealizadoUsd || 0) > 0) {
+                      <div class="cb-item highlight">
+                        <span class="cb-label">Câmbio Médio Realizado (Efetivo):</span>
+                        <strong class="text-mint">R$ {{ ((selectedItemForDetails.valorRealizadoBrl || 0) / (selectedItemForDetails.valorRealizadoUsd || 1)) | number:'1.4-4' }}</strong>
+                      </div>
+                    }
+                    @if (cotacaoMercado()?.cotacaoOficial) {
+                      <div class="cb-item">
+                        <span class="cb-label">Cotação do Dólar Hoje (BACEN):</span>
+                        <strong>R$ {{ cotacaoMercado()?.cotacaoOficial | number:'1.4-4' }}</strong>
+                      </div>
+                    }
+                  </div>
+                  @if (cotacaoMercado()?.cotacaoOficial && (selectedItemForDetails.saldoUsd || 0) > 0) {
+                    <div class="cb-footer">
+                      <span>Projeção do saldo restante (US$ {{ selectedItemForDetails.saldoUsd | number:'1.2-2' }}) na cotação de hoje: <strong>{{ ((selectedItemForDetails.saldoUsd || 0) * (cotacaoMercado()?.cotacaoOficial || 1)) | currencyBrl }}</strong></span>
+                    </div>
+                  }
+                </div>
               </div>
 
               @if (selectedItemForDetails.observacoes) {
@@ -700,12 +722,35 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .cambio-cell {
       display: flex;
       flex-direction: column;
-      gap: 0.15rem;
+      gap: 0.2rem;
     }
     .cambio-live {
       font-size: 0.85rem;
       color: var(--color-navy);
       font-weight: 700;
+    }
+    .cambio-sub-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      border-radius: var(--radius-pill);
+      display: inline-block;
+      width: fit-content;
+      &.tag-executado {
+        background: #DCFCE7;
+        color: #166534;
+        border: 1px solid #BBF7D0;
+      }
+      &.tag-parcial {
+        background: #FEF3C7;
+        color: #92400E;
+        border: 1px solid #FDE68A;
+      }
+      &.tag-momento {
+        background: #EFF6FF;
+        color: #1E40AF;
+        border: 1px solid #BFDBFE;
+      }
     }
     .cambio-sub-base {
       font-size: 0.72rem;
@@ -976,22 +1021,51 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       flex-wrap: wrap;
       gap: 0.5rem;
     }
-    .market-comparison-bar {
-      background: #FFFBEB;
-      border: 1px solid #FDE68A;
+    .cambio-breakdown-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
       border-radius: var(--radius-sm);
-      padding: 0.75rem 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      font-size: 0.8rem;
+      padding: 0.85rem 1rem;
+      margin-top: 1rem;
     }
-    .comparison-header {
+    .cb-header {
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      font-size: 0.85rem;
       font-weight: 700;
-      color: #92400E;
+      color: var(--color-navy);
+      margin-bottom: 0.75rem;
+    }
+    .cb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+    }
+    .cb-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      background: #FFF;
+      border: 1px solid var(--color-border);
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      &.highlight {
+        border-color: #86EFAC;
+        background: #F0FDF4;
+      }
+    }
+    .cb-label {
+      color: var(--color-text-secondary);
+      font-size: 0.72rem;
+    }
+    .cb-footer {
+      margin-top: 0.75rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed #E2E8F0;
+      font-size: 0.8rem;
+      color: #334155;
     }
     .observacoes-box {
       background: #F8FAFC;
@@ -1455,5 +1529,48 @@ export class OrcamentoComponent implements OnInit {
         }
       });
     }
+  }
+
+  getCambioDisplay(item: ItemOrcamento): { taxa: number; tipo: 'EXECUTADO' | 'PARCIAL' | 'MOMENTO'; rotulo: string } {
+    const realizadoUsd = Number(item.valorRealizadoUsd) || 0;
+    const realizadoBrl = Number(item.valorRealizadoBrl) || 0;
+    const saldoUsd = Number(item.saldoUsd) || 0;
+
+    // 100% Executado (todo valor orçado liquidado ou saldo zerado/negativo)
+    if (realizadoUsd > 0 && saldoUsd <= 0) {
+      const taxaMedia = realizadoBrl / realizadoUsd;
+      return {
+        taxa: taxaMedia,
+        tipo: 'EXECUTADO',
+        rotulo: 'Média Efetiva'
+      };
+    }
+
+    // Em Execução (parcialmente gasto)
+    if (realizadoUsd > 0 && saldoUsd > 0) {
+      const taxaMedia = realizadoBrl / realizadoUsd;
+      return {
+        taxa: taxaMedia,
+        tipo: 'PARCIAL',
+        rotulo: 'Média Parcial'
+      };
+    }
+
+    // Planejado (0% executado)
+    return {
+      taxa: this.cotacaoMercado()?.cotacaoOficial || item.taxaCambioUsada || this.taxaAtual(),
+      tipo: 'MOMENTO',
+      rotulo: 'Hoje (BACEN)'
+    };
+  }
+
+  getCambioTooltip(item: ItemOrcamento, cInfo: { taxa: number; tipo: string; rotulo: string }): string {
+    if (cInfo.tipo === 'EXECUTADO') {
+      return `Orçamento 100% executado: taxa média ponderada real de R$ ${(Number(item.valorRealizadoBrl) || 0).toFixed(2)} pagos sobre US$ ${(Number(item.valorRealizadoUsd) || 0).toFixed(2)} gastos.`;
+    }
+    if (cInfo.tipo === 'PARCIAL') {
+      return `Orçamento em execução: taxa média ponderada dos lançamentos realizados até o momento.`;
+    }
+    return `Orçamento planejado: cotação oficial do dólar do momento (BACEN PTAX).`;
   }
 }
