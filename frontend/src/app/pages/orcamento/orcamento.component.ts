@@ -50,6 +50,12 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
           </div>
 
           <div class="summary-pills">
+            @if (cotacaoMercado()?.cotacaoOficial) {
+              <div class="pill pill-blue" title="Cotação oficial consultada no Banco Central (BACEN PTAX)">
+                <span>Câmbio Oficial Hoje:</span>
+                <strong>1 USD = R$ {{ cotacaoMercado()?.cotacaoOficial | number:'1.4-4' }}</strong>
+              </div>
+            }
             <div class="pill">
               <span>Orçamento Aprovado:</span>
               <strong>US$ {{ totalUsd() | number:'1.2-2' }} <small class="text-muted">({{ totalBrl() | currencyBrl }})</small></strong>
@@ -82,7 +88,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
               <th>Orçado (USD)</th>
               <th>Gasto (USD)</th>
               <th>Saldo (USD)</th>
-              <th>Câmbio Base</th>
+              <th>Câmbio do Momento</th>
               <th>Orçado (BRL)</th>
               <th>Pago (BRL)</th>
               <th>Saldo (BRL)</th>
@@ -110,7 +116,14 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                     US$ {{ (item.saldoUsd || 0) | number:'1.2-2' }}
                   </span>
                 </td>
-                <td><small>R$ {{ item.taxaCambioUsada | number:'1.4-4' }}</small></td>
+                <td>
+                  <div class="cambio-cell">
+                    <strong class="cambio-live">R$ {{ (cotacaoMercado()?.cotacaoOficial || item.taxaCambioUsada || taxaAtual()) | number:'1.4-4' }}</strong>
+                    @if (item.taxaCambioUsada && cotacaoMercado()?.cotacaoOficial && item.taxaCambioUsada !== cotacaoMercado()?.cotacaoOficial) {
+                      <small class="cambio-sub-base" title="Taxa base cadastrada no aporte">Base: R$ {{ item.taxaCambioUsada | number:'1.4-4' }}</small>
+                    }
+                  </div>
+                </td>
                 <td>{{ item.valorOrcadoBrl | currencyBrl }}</td>
                 <td class="text-realizado">{{ item.valorRealizadoBrl | currencyBrl }}</td>
                 <td>
@@ -682,6 +695,21 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       &.pill-purple { border-color: var(--color-purple); strong { color: var(--color-purple); } }
       &.pill-mint { border-color: var(--color-mint); strong { color: #00874C; } }
       &.pill-danger { border-color: var(--color-danger); strong { color: var(--color-danger); } }
+      &.pill-blue { border-color: #93C5FD; background: #EFF6FF; strong { color: #1E40AF; } }
+    }
+    .cambio-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    .cambio-live {
+      font-size: 0.85rem;
+      color: var(--color-navy);
+      font-weight: 700;
+    }
+    .cambio-sub-base {
+      font-size: 0.72rem;
+      color: var(--color-text-muted);
     }
     .text-usd-gasto {
       color: var(--color-purple);
@@ -1182,7 +1210,17 @@ export class OrcamentoComponent implements OnInit {
 
   loadCotacaoMercado() {
     this.apiService.getCotacaoDolarAtual().subscribe({
-      next: (c) => this.cotacaoMercado.set(c),
+      next: (c) => {
+        this.cotacaoMercado.set(c);
+        if (c?.cotacaoOficial) {
+          if (!this.formData.taxaCambioUsada || this.formData.taxaCambioUsada === 5.5) {
+            this.formData.taxaCambioUsada = c.cotacaoOficial;
+          }
+          if (!this.transferData.taxaCambio || this.transferData.taxaCambio === 5.5) {
+            this.transferData.taxaCambio = c.cotacaoOficial;
+          }
+        }
+      },
       error: () => {}
     });
   }
@@ -1261,7 +1299,7 @@ export class OrcamentoComponent implements OnInit {
       categoriaId: this.categorias()[0]?.id ?? undefined,
       descricao: '',
       valorOrcadoUsd: 0,
-      taxaCambioUsada: this.taxaAtual(),
+      taxaCambioUsada: this.cotacaoMercado()?.cotacaoOficial || this.taxaAtual(),
       observacoes: ''
     };
     this.modalOpen.set(true);
@@ -1275,7 +1313,7 @@ export class OrcamentoComponent implements OnInit {
       categoriaId: item.categoriaId,
       descricao: item.descricao || '',
       valorOrcadoUsd: item.valorOrcadoUsd,
-      taxaCambioUsada: item.taxaCambioUsada || this.taxaAtual(),
+      taxaCambioUsada: item.taxaCambioUsada || this.cotacaoMercado()?.cotacaoOficial || this.taxaAtual(),
       observacoes: item.observacoes
     };
     this.modalOpen.set(true);
@@ -1327,7 +1365,7 @@ export class OrcamentoComponent implements OnInit {
       eventoDestinoId: undefined,
       categoriaDestinoId: undefined,
       valorUsd: 0,
-      taxaCambio: this.taxaAtual(),
+      taxaCambio: this.cotacaoMercado()?.cotacaoOficial || this.taxaAtual(),
       motivo: ''
     };
     this.saldosOrigem.set([]);
