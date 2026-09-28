@@ -248,15 +248,15 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                       @if (l.anexos && l.anexos.length > 0) {
                         <div class="anexos-cell-list">
                           @for (anx of l.anexos; track anx.id) {
-                            <a [href]="anx.url" target="_blank" class="btn btn-sm btn-outline btn-anexo">
+                            <button type="button" class="btn btn-sm btn-outline btn-anexo" (click)="visualizarAnexo(l.id!, anx.id!, anx.nomeOriginal)">
                               📎 {{ anx.nomeOriginal }}
-                            </a>
+                            </button>
                           }
                         </div>
                       } @else if (l.anexoUrl) {
-                        <a [href]="'/api/lancamentos/' + l.id + '/anexo'" target="_blank" class="btn btn-sm btn-outline btn-anexo">
+                        <button type="button" class="btn btn-sm btn-outline btn-anexo" (click)="visualizarAnexoPrincipal(l.id!, l.anexoNomeOriginal)">
                           📎 {{ l.anexoNomeOriginal || 'Ver Comprovante' }}
-                        </a>
+                        </button>
                       } @else {
                         <span class="badge-pending">⚠️ Pendente Anexo</span>
                       }
@@ -711,6 +711,42 @@ export class RelatoriosComponent implements OnInit {
         this.isDownloadingCsv.set(false);
         this.toast.error('Erro ao exportar planilha CSV.');
       }
+    });
+  }
+
+  visualizarAnexo(lancamentoId: number, anexoId: number, nomeOriginal?: string) {
+    this.toast.info('Abrindo comprovante...');
+    this.apiService.downloadAnexoEspecifico(lancamentoId, anexoId).subscribe({
+      next: (blob) => {
+        const fileUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = fileUrl;
+        a.download = nomeOriginal || `anexo_${anexoId}.pdf`;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(fileUrl);
+      },
+      error: () => this.toast.error('Erro ao baixar/visualizar comprovante.')
+    });
+  }
+
+  visualizarAnexoPrincipal(lancamentoId: number, nomeOriginal?: string) {
+    this.toast.info('Abrindo comprovante...');
+    this.apiService.downloadAnexoLancamento(lancamentoId).subscribe({
+      next: (blob) => {
+        const fileUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = fileUrl;
+        a.download = nomeOriginal || `comprovante_${lancamentoId}.pdf`;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(fileUrl);
+      },
+      error: () => this.toast.error('Erro ao baixar/visualizar comprovante.')
     });
   }
 

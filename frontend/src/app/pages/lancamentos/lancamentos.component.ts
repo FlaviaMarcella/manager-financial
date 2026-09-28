@@ -353,9 +353,9 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                       <div class="files-header">Anexos já cadastrados:</div>
                       @for (anx of formData.anexos; track anx.id) {
                         <div class="existing-anexo-item">
-                          <a [href]="anx.url" target="_blank" class="anexo-link">
+                          <button type="button" class="anexo-link-btn" (click)="downloadAnexoEspecifico(editingId()!, anx.id!, anx.nomeOriginal)">
                             📎 {{ anx.nomeOriginal }}
-                          </a>
+                          </button>
                           <button type="button" class="btn-remove-anexo" (click)="removerAnexoExistente(anx.id!)" title="Excluir este anexo">
                             🗑️
                           </button>
@@ -496,9 +496,9 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                             <small class="text-muted">{{ formatBytes(anx.tamanhoBytes) }}</small>
                           }
                         </div>
-                        <a [href]="anx.url" target="_blank" class="btn btn-sm btn-primary">
+                        <button type="button" class="btn btn-sm btn-primary" (click)="downloadAnexoEspecifico(selectedLancamento()!.id!, anx.id!, anx.nomeOriginal)">
                           Visualizar / Baixar
-                        </a>
+                        </button>
                       </div>
                     }
                   </div>
@@ -850,9 +850,13 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       border-radius: 4px;
       padding: 0.35rem 0.6rem;
     }
-    .anexo-link {
+    .anexo-link, .anexo-link-btn {
       font-size: 0.8rem;
       color: #0284C7;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
       text-decoration: none;
       font-weight: 600;
       &:hover { text-decoration: underline; }
@@ -1244,6 +1248,21 @@ export class LancamentosComponent implements OnInit {
         const a = document.createElement('a');
         a.href = url;
         a.download = item.anexoNomeOriginal || `anexo_${item.id}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => this.toast.error('Erro ao baixar anexo.')
+    });
+  }
+
+  downloadAnexoEspecifico(lancamentoId: number, anexoId: number, nomeOriginal?: string) {
+    if (!lancamentoId || !anexoId) return;
+    this.api.downloadAnexoEspecifico(lancamentoId, anexoId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nomeOriginal || `anexo_${anexoId}.pdf`;
         a.click();
         window.URL.revokeObjectURL(url);
       },

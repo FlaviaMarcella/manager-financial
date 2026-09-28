@@ -199,6 +199,10 @@ export class ApiService {
     return this.http.get(`${this.baseUrl}/lancamentos/${id}/anexo`, { responseType: 'blob' });
   }
 
+  downloadAnexoEspecifico(lancamentoId: number, anexoId: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/lancamentos/${lancamentoId}/anexos/${anexoId}`, { responseType: 'blob' });
+  }
+
   removeAnexoLancamento(id: number): Observable<Lancamento> {
     return this.http.delete<Lancamento>(`${this.baseUrl}/lancamentos/${id}/anexo`);
   }
