@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, inject, signal, ViewChild, ElementRef, AfterViewInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { CotacaoDolar, DashboardSummary } from '../../core/models/models';
 import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
 import Chart from 'chart.js/auto';
@@ -188,7 +189,7 @@ import Chart from 'chart.js/auto';
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      background: #FFFFFF;
+      background: var(--color-surface);
       border: 1px solid var(--color-border);
       padding: 0.45rem 0.85rem;
       border-radius: var(--radius-pill);
@@ -203,8 +204,8 @@ import Chart from 'chart.js/auto';
         &.dot-blue { background-color: var(--color-blue); }
       }
       &.market-badge {
-        background: #F8FAFC;
-        border-color: #CBD5E1;
+        background: var(--color-surface-hover);
+        border-color: var(--color-border);
       }
     }
     .var-tag {
@@ -360,6 +361,7 @@ import Chart from 'chart.js/auto';
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
   private apiService = inject(ApiService);
+  readonly themeService = inject(ThemeService);
 
   summary = signal<DashboardSummary | null>(null);
   cotacaoMercado = signal<CotacaoDolar | null>(null);
@@ -369,6 +371,17 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   private categoriaChartInstance: Chart | null = null;
   private eventoChartInstance: Chart | null = null;
+
+  constructor() {
+    effect(() => {
+      // Re-renderiza gráficos quando o tema alternar
+      this.themeService.theme();
+      const currentSummary = this.summary();
+      if (currentSummary) {
+        setTimeout(() => this.renderCharts(currentSummary), 30);
+      }
+    });
+  }
 
   ngOnInit() {
     this.loadData();
@@ -396,6 +409,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   renderCharts(data: DashboardSummary) {
+    const isDark = this.themeService.isDark();
+    const textColor = isDark ? '#F1F5F9' : '#151D25';
+    const gridColor = isDark ? '#233142' : '#E2E8F0';
+    const borderColor = isDark ? '#141C26' : '#FFFFFF';
+
     // 1. Doughnut Chart: Gastos por Categoria
     if (this.categoriaCanvas?.nativeElement) {
       if (this.categoriaChartInstance) {
@@ -412,9 +430,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
           labels: labels.length > 0 ? labels : ['Sem despesas registradas'],
           datasets: [{
             data: values.length > 0 ? values : [1],
-            backgroundColor: values.length > 0 ? colors : ['#E2E8F0'],
+            backgroundColor: values.length > 0 ? colors : (isDark ? ['#233142'] : ['#E2E8F0']),
             borderWidth: 2,
-            borderColor: '#FFFFFF'
+            borderColor: borderColor
           }]
         },
         options: {
@@ -425,6 +443,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
               position: 'bottom',
               labels: {
                 boxWidth: 12,
+                color: textColor,
                 font: { family: "'Amazon Ember Display', Arial, sans-serif", size: 11 }
               }
             }
@@ -471,16 +490,23 @@ export class DashboardComponent implements OnInit, AfterViewInit {
               position: 'bottom',
               labels: {
                 boxWidth: 12,
+                color: textColor,
                 font: { family: "'Amazon Ember Display', Arial, sans-serif", size: 11 }
               }
             }
           },
           scales: {
+            x: {
+              ticks: { color: textColor },
+              grid: { color: gridColor }
+            },
             y: {
               beginAtZero: true,
               ticks: {
+                color: textColor,
                 callback: (val) => 'R$ ' + Number(val).toLocaleString('pt-BR')
-              }
+              },
+              grid: { color: gridColor }
             }
           }
         }

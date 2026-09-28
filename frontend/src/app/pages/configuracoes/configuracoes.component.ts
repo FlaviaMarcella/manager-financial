@@ -412,7 +412,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       gap: 1rem;
     }
     .cambio-box {
-      background: #F8FAFC;
+      background: var(--color-surface-hover);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
       padding: 1.25rem;
@@ -429,12 +429,12 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
     .box-tag {
       font-size: 0.75rem;
       font-weight: 700;
-      color: #0284C7;
+      color: #41B3FF;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    .tag-purple { color: #7B1BE0; }
-    .tag-mint { color: #00874C; }
+    .tag-purple { color: #AC5BFF; }
+    .tag-mint { color: #00E582; }
 
     .market-rate-display {
       display: flex;
@@ -449,8 +449,8 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       font-weight: 700;
       padding: 0.15rem 0.4rem;
       border-radius: 4px;
-      &.var-pos { background: rgba(0, 229, 130, 0.15); color: #00874C; }
-      &.var-neg { background: rgba(255, 77, 79, 0.15); color: #DC2626; }
+      &.var-pos { background: rgba(0, 229, 130, 0.18); color: #00E582; }
+      &.var-neg { background: rgba(255, 77, 79, 0.18); color: #FF4D4F; }
     }
 
     .market-stats {
@@ -476,11 +476,11 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       color: var(--color-text-secondary);
     }
     .btn-copy-rate {
-      color: #B45309;
-      border-color: #FDE68A;
-      background: #FFFBEB;
+      color: #FF9900;
+      border-color: rgba(255, 153, 0, 0.4);
+      background: var(--color-amber-subtle);
       font-weight: 600;
-      &:hover { background: #FEF3C7; }
+      &:hover { background: rgba(255, 153, 0, 0.25); }
     }
 
     .spread-presets {
@@ -492,7 +492,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
     }
     .preset-label { font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 600; }
     .btn-preset {
-      background: #FFFFFF;
+      background: var(--color-surface);
       border: 1px solid var(--color-border);
       color: var(--color-navy);
       padding: 0.25rem 0.5rem;
@@ -503,7 +503,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       &.active {
         background: var(--color-purple-subtle);
         border-color: var(--color-purple);
-        color: #7B1BE0;
+        color: #C084FC;
       }
     }
 
@@ -513,7 +513,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
     .input-group-custom {
       display: flex;
       align-items: center;
-      background: #FFFFFF;
+      background: var(--color-input-bg);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
       overflow: hidden;
@@ -523,7 +523,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
         font-size: 0.8rem;
         font-weight: 600;
         color: var(--color-text-secondary);
-        background: #F1F5F9;
+        background: var(--color-surface-hover);
         border-right: 1px solid var(--color-border);
       }
       .form-control {
@@ -534,7 +534,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
     }
 
     .simulacao-result {
-      background: #FFFFFF;
+      background: var(--color-surface);
       border: 1px solid var(--color-border);
       padding: 0.75rem;
       border-radius: 6px;
@@ -553,7 +553,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
       border-top: 1px dashed var(--color-border);
       padding-top: 0.35rem;
       margin-top: 0.35rem;
-      strong { color: #059669; }
+      strong { color: #00E582; }
     }
     .result-example {
       margin-top: 0.5rem;
@@ -575,7 +575,7 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
     .input-prefix-group {
       display: flex;
       align-items: center;
-      background: #FFFFFF;
+      background: var(--color-input-bg);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
       overflow: hidden;
@@ -583,9 +583,9 @@ import { Categoria, ConfiguracaoGlobal, CotacaoDolar, Evento, StatusFinanceiro }
         padding: 0 0.75rem;
         font-size: 0.9rem;
         font-weight: 700;
-        color: #B45309;
-        background: #FFFBEB;
-        border-right: 1px solid #FDE68A;
+        color: #FF9900;
+        background: var(--color-amber-subtle);
+        border-right: 1px solid rgba(255, 153, 0, 0.3);
       }
       .input-taxa {
         border: none;

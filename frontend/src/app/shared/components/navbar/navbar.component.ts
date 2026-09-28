@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 @Component({
   selector: 'app-navbar',
@@ -66,8 +67,32 @@ import { AuthService } from '../../../core/services/auth.service';
           }
         </nav>
 
-        <!-- 3. Ações Admin Condensadas, Usuário & Logout (Direita) -->
+        <!-- 3. Ações Admin Condensadas, Usuário, Tema & Logout (Direita) -->
         <div class="navbar-actions">
+          <!-- Botão Alternador de Tema (Dark / Light) -->
+          <button class="btn-theme-toggle" 
+                  (click)="themeService.toggleTheme()" 
+                  [title]="themeService.isDark() ? 'Alternar para Modo Claro' : 'Alternar para Modo Escuro'" 
+                  aria-label="Alternar tema de cores">
+            @if (themeService.isDark()) {
+              <svg class="theme-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+            } @else {
+              <svg class="theme-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            }
+          </button>
+
           @if (authService.isAdmin()) {
             <div class="admin-quick-links">
               <a routerLink="/configuracoes" routerLinkActive="active-admin" class="btn-admin-pill" title="Configurações & Câmbio">
@@ -355,6 +380,35 @@ import { AuthService } from '../../../core/services/auth.service';
       }
     }
 
+    .btn-theme-toggle {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #CBD5E1;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+
+      .theme-icon {
+        color: #FF9900;
+        transition: transform 0.3s ease;
+      }
+
+      &:hover {
+        background: rgba(255, 153, 0, 0.15);
+        border-color: rgba(255, 153, 0, 0.4);
+        transform: scale(1.06);
+        .theme-icon {
+          transform: rotate(25deg);
+        }
+      }
+    }
+
     .btn-logout {
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.12);
@@ -481,6 +535,7 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class NavbarComponent {
   authService = inject(AuthService);
+  themeService = inject(ThemeService);
   mobileMenuOpen = signal(false);
 
   toggleMenu() {

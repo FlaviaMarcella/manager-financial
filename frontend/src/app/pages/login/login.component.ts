@@ -343,7 +343,7 @@ declare const google: any;
       align-items: center;
       justify-content: center;
       padding: 3rem 2rem;
-      background-color: #FFFFFF;
+      background-color: var(--color-surface);
     }
 
     .auth-container {
@@ -361,7 +361,8 @@ declare const google: any;
     .auth-icon-wrapper {
       width: 52px;
       height: 52px;
-      background: #F1F5F9;
+      background: var(--color-surface-hover);
+      border: 1px solid var(--color-border);
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
@@ -408,9 +409,9 @@ declare const google: any;
     .btn-google-custom {
       width: 100%;
       max-width: 360px;
-      background: #FFFFFF;
-      color: #3C4043;
-      border: 1px solid #DADCE0;
+      background: var(--color-surface);
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
       font-size: 0.95rem;
       font-weight: 600;
@@ -420,13 +421,13 @@ declare const google: any;
       justify-content: center;
       gap: 0.75rem;
       cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-sm);
       transition: all var(--transition-fast);
 
       &:hover {
-        background: #F8F9FA;
-        border-color: #C2C6CA;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+        background: var(--color-surface-hover);
+        border-color: var(--color-amber);
+        box-shadow: var(--shadow-md);
       }
     }
 
@@ -462,8 +463,8 @@ declare const google: any;
       display: flex;
       align-items: flex-start;
       gap: 0.75rem;
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
+      background: var(--color-surface-hover);
+      border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
       padding: 1rem;
 
@@ -490,8 +491,8 @@ declare const google: any;
 
     /* Painel de Estado Pendente */
     .pending-box {
-      background: #FFFDF0;
-      border: 1px solid #FFE082;
+      background: var(--color-amber-subtle);
+      border: 1px solid rgba(255, 153, 0, 0.35);
       border-radius: var(--radius-md);
       padding: 1.75rem 1.5rem;
       display: flex;
@@ -510,7 +511,7 @@ declare const google: any;
 
       h3 {
         font-size: 1.15rem;
-        color: #B78103;
+        color: #FF9900;
         margin: 0;
       }
     }
@@ -519,17 +520,17 @@ declare const google: any;
       display: inline-block;
       font-size: 0.7rem;
       font-weight: 700;
-      background: #FFF3E0;
-      color: #E65100;
+      background: rgba(255, 153, 0, 0.2);
+      color: #FF9900;
       padding: 0.15rem 0.5rem;
       border-radius: var(--radius-pill);
-      border: 1px solid #FFE0B2;
+      border: 1px solid rgba(255, 153, 0, 0.3);
       margin-top: 0.25rem;
     }
 
     .pending-user-card {
-      background: #FFFFFF;
-      border: 1px solid rgba(183, 129, 3, 0.18);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
       padding: 0.75rem 1rem;
 

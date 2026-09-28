@@ -312,7 +312,7 @@ import { Brinde, Evento, Parceria } from '../../core/models/models';
       flex-wrap: wrap;
     }
     .pill {
-      background: #F1F5F9;
+      background: var(--color-surface-hover);
       border: 1px solid var(--color-border);
       padding: 0.5rem 0.875rem;
       border-radius: var(--radius-sm);
@@ -324,22 +324,22 @@ import { Brinde, Evento, Parceria } from '../../core/models/models';
         font-size: 0.95rem;
         color: var(--color-navy);
       }
-      &.pill-blue { border-color: var(--color-blue); strong { color: #0077C7; } }
+      &.pill-blue { border-color: var(--color-blue); strong { color: #60A5FA; } }
       &.pill-purple { border-color: var(--color-purple); strong { color: var(--color-purple); } }
-      &.pill-mint { border-color: var(--color-mint); strong { color: #00874C; } }
+      &.pill-mint { border-color: var(--color-mint); strong { color: #00E582; } }
     }
     .stock-count {
       font-weight: 700;
       padding: 0.2rem 0.55rem;
       border-radius: var(--radius-pill);
-      &.stock-ok { background: var(--color-mint-subtle); color: #00874C; }
-      &.stock-zero { background: var(--color-amber-subtle); color: var(--color-amber-hover); }
+      &.stock-ok { background: var(--color-mint-subtle); color: #00E582; }
+      &.stock-zero { background: var(--color-amber-subtle); color: #FF9900; }
       &.stock-danger { background: var(--color-danger-subtle); color: var(--color-danger); }
     }
     .btn-view {
-      color: var(--color-navy);
+      color: var(--color-text-primary);
       font-weight: 600;
-      &:hover { background: #F1F5F9; }
+      &:hover { background: var(--color-surface-hover); }
     }
     .action-buttons {
       display: flex;
@@ -434,8 +434,8 @@ import { Brinde, Evento, Parceria } from '../../core/models/models';
       color: var(--color-navy);
     }
     .stock-details-box {
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
+      background: var(--color-surface-hover);
+      border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
       padding: 1.25rem;
     }
@@ -445,7 +445,7 @@ import { Brinde, Evento, Parceria } from '../../core/models/models';
       gap: 0.75rem;
     }
     .stk-card {
-      background: #FFFFFF;
+      background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
       padding: 0.75rem;
@@ -468,12 +468,12 @@ import { Brinde, Evento, Parceria } from '../../core/models/models';
       margin: 0;
     }
     .observacoes-box {
-      background: #F8FAFC;
+      background: var(--color-surface-hover);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
       padding: 0.75rem;
       font-size: 0.85rem;
-      color: #334155;
+      color: var(--color-text-primary);
       line-height: 1.5;
     }
     @media (max-width: 768px) {

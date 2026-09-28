@@ -553,7 +553,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
 
     /* Filtros Alinhados */
     .filter-card {
-      background: #FFFFFF;
+      background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
       padding: 1.25rem 1.5rem;
@@ -599,10 +599,10 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       border-top: 1px solid var(--color-border-light);
     }
     .btn-clear {
-      color: var(--color-navy);
-      border-color: #CBD5E1;
+      color: var(--color-text-primary);
+      border-color: var(--color-border);
       font-weight: 600;
-      &:hover { background: #F8FAFC; }
+      &:hover { background: var(--color-surface-hover); }
     }
     .filter-stats {
       display: flex;
@@ -624,18 +624,18 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     }
     .total-label {
       font-size: 0.82rem;
-      color: #92400E;
+      color: #FF9900;
       font-weight: 600;
     }
     .total-val {
       font-size: 1.05rem;
-      color: #B45309;
+      color: #FF9900;
       font-weight: 700;
     }
 
     /* Tabela */
     .table-container {
-      background: #FFFFFF;
+      background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
       overflow-x: auto;
@@ -657,7 +657,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       margin-bottom: 0.2rem;
     }
     .nf-code {
-      background: #F1F5F9;
+      background: var(--color-surface-hover);
       padding: 0.2rem 0.4rem;
       border-radius: 4px;
       font-size: 0.78rem;
@@ -715,16 +715,16 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .btn-details {
       font-size: 0.78rem;
       padding: 0.35rem 0.6rem;
-      color: var(--color-navy);
-      border-color: #CBD5E1;
+      color: var(--color-text-primary);
+      border-color: var(--color-border);
       font-weight: 600;
-      &:hover { background: #F8FAFC; border-color: var(--color-navy); }
+      &:hover { background: var(--color-surface-hover); border-color: var(--color-amber); }
     }
 
     /* Modal Form Cálculos */
     .cambio-calc-card {
-      background: #FFFBEB;
-      border: 1px solid #FDE68A;
+      background: var(--color-amber-subtle);
+      border: 1px solid rgba(255, 153, 0, 0.3);
       border-radius: 8px;
       padding: 1rem;
       margin-bottom: 1rem;
@@ -738,30 +738,31 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .calc-title {
       font-size: 0.88rem;
       font-weight: 700;
-      color: #B45309;
+      color: #FF9900;
     }
     .calc-badge {
       font-size: 0.75rem;
-      color: #78350F;
-      background: #FEF3C7;
+      color: #FF9900;
+      background: var(--color-surface-hover);
       padding: 0.2rem 0.5rem;
       border-radius: 4px;
       font-weight: 600;
+      border: 1px solid rgba(255, 153, 0, 0.25);
     }
     .input-prefix-group {
       display: flex;
       align-items: center;
-      background: #FFFFFF;
-      border: 1px solid #CBD5E1;
+      background: var(--color-input-bg);
+      border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
       overflow: hidden;
       .input-prefix {
         padding: 0 0.65rem;
         font-size: 0.85rem;
         font-weight: 700;
-        color: #64748B;
-        background: #F8FAFC;
-        border-right: 1px solid #CBD5E1;
+        color: var(--color-text-secondary);
+        background: var(--color-surface-hover);
+        border-right: 1px solid var(--color-border);
       }
       .form-control {
         border: none;
@@ -772,9 +773,9 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .calc-summary-box {
       margin-top: 0.75rem;
       padding: 0.75rem 1rem;
-      background: #FFFFFF;
+      background: var(--color-surface);
       border-radius: 6px;
-      border: 1px solid #FCD34D;
+      border: 1px solid rgba(255, 153, 0, 0.35);
     }
     .summary-grid {
       display: grid;
@@ -789,7 +790,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     .sum-label {
       font-size: 0.7rem;
       font-weight: 600;
-      color: #64748B;
+      color: var(--color-text-secondary);
       text-transform: uppercase;
     }
     .sum-val {
@@ -797,9 +798,9 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       font-weight: 700;
       color: var(--color-navy);
     }
-    .text-mint { color: #059669 !important; }
-    .text-amber { color: #D97706 !important; }
-    .text-warning { color: #DC2626 !important; }
+    .text-mint { color: #00E582 !important; }
+    .text-amber { color: #FF9900 !important; }
+    .text-warning { color: #FF4D4F !important; }
 
     /* Estilos de Arquivos e Múltiplos Anexos */
     .selected-files-list, .existing-anexos-list {
@@ -807,8 +808,8 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       display: flex;
       flex-direction: column;
       gap: 0.4rem;
-      background: #F8FAFC;
-      border: 1px dashed #CBD5E1;
+      background: var(--color-surface-hover);
+      border: 1px dashed var(--color-border);
       border-radius: 6px;
       padding: 0.6rem 0.8rem;
     }
@@ -822,8 +823,8 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
       border-radius: 4px;
       padding: 0.35rem 0.6rem;
       font-size: 0.8rem;
@@ -845,14 +846,14 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
       border-radius: 4px;
       padding: 0.35rem 0.6rem;
     }
     .anexo-link, .anexo-link-btn {
       font-size: 0.8rem;
-      color: #0284C7;
+      color: #41B3FF;
       background: none;
       border: none;
       padding: 0;
@@ -899,7 +900,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
     }
     .detail-label {
       font-size: 0.72rem;
-      color: #64748B;
+      color: var(--color-text-secondary);
       text-transform: uppercase;
       font-weight: 600;
     }
@@ -909,7 +910,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       &.text-lg { font-size: 1.05rem; }
     }
     .cambio-breakdown-card {
-      background: #F8FAFC;
+      background: var(--color-surface-hover);
       border: 1px solid var(--color-border);
       border-radius: 8px;
       padding: 1rem;
@@ -923,13 +924,13 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       display: flex;
       flex-direction: column;
       gap: 0.2rem;
-      small { font-size: 0.7rem; color: #64748B; }
+      small { font-size: 0.7rem; color: var(--color-text-muted); }
     }
-    .b-label { font-size: 0.72rem; color: #64748B; font-weight: 600; }
+    .b-label { font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 600; }
     .b-val { font-size: 1.05rem; color: var(--color-navy); font-weight: 700; }
-    .highlight-green .b-val { color: #059669; }
-    .highlight-amber .b-val { color: #D97706; }
-    .highlight-warning .b-val { color: #DC2626; }
+    .highlight-green .b-val { color: #00E582; }
+    .highlight-amber .b-val { color: #FF9900; }
+    .highlight-warning .b-val { color: #FF4D4F; }
 
     .anexos-grid {
       display: flex;
@@ -940,7 +941,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #F8FAFC;
+      background: var(--color-surface-hover);
       padding: 0.75rem 1rem;
       border-radius: 6px;
       border: 1px solid var(--color-border);
@@ -952,7 +953,7 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
       strong { font-size: 0.85rem; color: var(--color-navy); }
     }
     .notes-text {
-      background: #F8FAFC;
+      background: var(--color-surface-hover);
       padding: 0.75rem 1rem;
       border-radius: 6px;
       color: var(--color-navy);
