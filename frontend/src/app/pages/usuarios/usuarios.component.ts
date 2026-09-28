@@ -6,7 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { PapelUsuario, StatusUsuario, Usuario } from '../../core/models/models';
 
-type FilterTab = 'PENDENTES' | 'ATIVOS' | 'TODOS';
+type FilterTab = 'PENDENTES' | 'ATIVOS' | 'INATIVOS' | 'TODOS';
 
 @Component({
   selector: 'app-usuarios',
@@ -45,6 +45,14 @@ type FilterTab = 'PENDENTES' | 'ATIVOS' | 'TODOS';
           <div class="kpi-info">
             <span class="kpi-label">Usuários Aprovados / Ativos</span>
             <span class="kpi-value text-mint">{{ ativosCount() }}</span>
+          </div>
+        </div>
+
+        <div class="kpi-card" (click)="activeTab.set('INATIVOS')">
+          <div class="kpi-icon">🔒</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Desativados / Bloqueados</span>
+            <span class="kpi-value text-danger">{{ inativosCount() }}</span>
           </div>
         </div>
 
@@ -92,6 +100,9 @@ type FilterTab = 'PENDENTES' | 'ATIVOS' | 'TODOS';
         <button class="tab-btn" [class.active]="activeTab() === 'ATIVOS'" (click)="activeTab.set('ATIVOS')">
           ✅ Usuários Aprovados ({{ ativosCount() }})
         </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'INATIVOS'" (click)="activeTab.set('INATIVOS')">
+          🔒 Desativados / Bloqueados ({{ inativosCount() }})
+        </button>
         <button class="tab-btn" [class.active]="activeTab() === 'TODOS'" (click)="activeTab.set('TODOS')">
           📋 Todos os Cadastros ({{ usuarios().length }})
         </button>
@@ -131,7 +142,7 @@ type FilterTab = 'PENDENTES' | 'ATIVOS' | 'TODOS';
                   } @else if (u.status === 'REJEITADO') {
                     <span class="badge badge-danger">✕ Recusado</span>
                   } @else if (u.status === 'BLOQUEADO' || !u.ativo) {
-                    <span class="badge badge-danger">🔒 Bloqueado</span>
+                    <span class="badge badge-danger">🔒 Desativado</span>
                   } @else {
                     <span class="badge badge-mint">✓ Aprovado / Ativo</span>
                   }
@@ -151,26 +162,30 @@ type FilterTab = 'PENDENTES' | 'ATIVOS' | 'TODOS';
                         ✕ Recusar
                       </button>
                     } 
-                    <!-- Se o usuário já foi aprovado ou rejeitado -->
+                    <!-- Se o usuário está DESATIVADO / BLOQUEADO / REJEITADO -->
+                    @else if (u.status === 'REJEITADO' || u.status === 'BLOQUEADO' || !u.ativo) {
+                      <button class="btn btn-sm btn-primary" (click)="aprovar(u, 'VIEWER')" title="Reativar e aprovar acesso como VIEWER">
+                        ✓ Reativar (VIEWER)
+                      </button>
+                      <button class="btn btn-sm btn-outline-amber" (click)="aprovar(u, 'ADMIN')" title="Reativar e conceder acesso de Administrador">
+                        ★ Reativar como ADMIN
+                      </button>
+                    } 
+                    <!-- Se o usuário está ATIVO -->
                     @else {
-                      @if (u.status === 'REJEITADO' || u.status === 'BLOQUEADO' || !u.ativo) {
-                        <button class="btn btn-sm btn-primary" (click)="aprovar(u, u.papel)">
-                          ✓ Reativar / Aprovar
-                        </button>
-                      } @else {
-                        <button class="btn btn-sm" 
-                                [class.btn-outline]="u.papel === 'ADMIN'" 
-                                [class.btn-primary]="u.papel === 'VIEWER'" 
-                                (click)="toggleRole(u)" 
-                                [disabled]="u.id === authService.currentUser()?.id">
-                          {{ u.papel === 'ADMIN' ? 'Rebaixar para VIEWER' : 'Promover a ADMIN' }}
-                        </button>
-                        <button class="btn btn-sm btn-danger-outline" 
-                                (click)="bloquear(u)" 
-                                [disabled]="u.id === authService.currentUser()?.id">
-                          Bloquear Acesso
-                        </button>
-                      }
+                      <button class="btn btn-sm" 
+                              [class.btn-outline]="u.papel === 'ADMIN'" 
+                              [class.btn-primary]="u.papel === 'VIEWER'" 
+                              (click)="toggleRole(u)" 
+                              [disabled]="u.id === authService.currentUser()?.id">
+                        {{ u.papel === 'ADMIN' ? 'Rebaixar para VIEWER' : 'Promover a ADMIN' }}
+                      </button>
+                      <button class="btn btn-sm btn-danger-outline" 
+                              (click)="desativar(u)" 
+                              [disabled]="u.id === authService.currentUser()?.id"
+                              title="Desativar acesso do usuário (precisará de nova aprovação se solicitar acesso)">
+                        🗑️ Desativar Usuário
+                      </button>
                     }
                   </div>
                 </td>
@@ -180,6 +195,8 @@ type FilterTab = 'PENDENTES' | 'ATIVOS' | 'TODOS';
                 <td colspan="6" class="empty-state">
                   @if (activeTab() === 'PENDENTES') {
                     🎉 Nenhuma solicitação de acesso pendente no momento!
+                  } @else if (activeTab() === 'INATIVOS') {
+                    Nenhum usuário desativado ou bloqueado no momento.
                   } @else {
                     Nenhum usuário encontrado para esta visualização.
                   }
@@ -402,6 +419,7 @@ export class UsuariosComponent implements OnInit {
 
   pendentesCount = computed(() => this.usuarios().filter(u => u.status === 'PENDENTE').length);
   ativosCount = computed(() => this.usuarios().filter(u => u.status === 'APROVADO' || (u.ativo && u.status !== 'PENDENTE' && u.status !== 'REJEITADO' && u.status !== 'BLOQUEADO')).length);
+  inativosCount = computed(() => this.usuarios().filter(u => !u.ativo || u.status === 'BLOQUEADO' || u.status === 'REJEITADO').length);
   adminsCount = computed(() => this.usuarios().filter(u => u.papel === 'ADMIN').length);
 
   filteredUsuarios = computed(() => {
@@ -411,6 +429,8 @@ export class UsuariosComponent implements OnInit {
       return list.filter(u => u.status === 'PENDENTE');
     } else if (tab === 'ATIVOS') {
       return list.filter(u => u.status === 'APROVADO' || (u.ativo && u.status !== 'PENDENTE' && u.status !== 'REJEITADO' && u.status !== 'BLOQUEADO'));
+    } else if (tab === 'INATIVOS') {
+      return list.filter(u => !u.ativo || u.status === 'BLOQUEADO' || u.status === 'REJEITADO');
     }
     return list;
   });
@@ -453,16 +473,21 @@ export class UsuariosComponent implements OnInit {
     }
   }
 
-  bloquear(u: Usuario) {
-    if (confirm(`Deseja realmente BLOQUEAR o acesso de "${u.nome}"? O usuário não conseguirá acessar o sistema.`)) {
-      this.apiService.updateUsuario(u.id, { papel: u.papel, status: 'BLOQUEADO', ativo: false }).subscribe({
+  desativar(u: Usuario) {
+    const msg = `Deseja realmente DESATIVAR / REMOVER o acesso de "${u.nome}" (${u.email})?\n\n• O usuário será desconectado e perderá o acesso ao sistema imediatamente.\n• Caso tente fazer login novamente com a conta Google, sua solicitação voltará para o status "Pendente de Aprovação" e exigirá autorização de um administrador.`;
+    if (confirm(msg)) {
+      this.apiService.desativarUsuario(u.id).subscribe({
         next: () => {
-          this.toast.warning(`Acesso de ${u.nome} foi bloqueado.`);
+          this.toast.warning(`Usuário ${u.nome} foi desativado. Caso tente logar novamente, precisará de aprovação prévia.`);
           this.loadUsuarios();
         },
-        error: (err) => this.toast.error(err.error?.message || 'Erro ao bloquear usuário.')
+        error: (err) => this.toast.error(err.error?.message || 'Erro ao desativar usuário.')
       });
     }
+  }
+
+  bloquear(u: Usuario) {
+    this.desativar(u);
   }
 
   toggleRole(u: Usuario) {

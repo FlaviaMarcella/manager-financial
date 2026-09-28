@@ -101,6 +101,18 @@ public class UsuarioService {
         return toDTO(salvo);
     }
 
+    @Transactional
+    public UsuarioDTO desativarUsuario(Long id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado com ID: " + id));
+
+        usuario.setStatus(StatusUsuario.BLOQUEADO);
+        usuario.setAtivo(false);
+
+        Usuario salvo = usuarioRepository.save(usuario);
+        return toDTO(salvo);
+    }
+
     public UsuarioDTO toDTO(Usuario usuario) {
         return UsuarioDTO.builder()
                 .id(usuario.getId())

@@ -65,6 +65,19 @@ public class AuthService {
                         existing.setPapel(PapelUsuario.ADMIN);
                         existing.setStatus(StatusUsuario.APROVADO);
                         existing.setAtivo(true);
+                    } else if (!existing.isAtivo() || existing.getStatus() == StatusUsuario.BLOQUEADO || existing.getStatus() == StatusUsuario.REJEITADO) {
+                        // Usuário que havia sido removido/desativado solicitando novo acesso:
+                        // Volta ao estado PENDENTE para nova aprovação da liderança/administrador
+                        logger.info("Usuário anteriormente desativado/bloqueado solicitando novo acesso: {}", existing.getEmail());
+                        existing.setStatus(StatusUsuario.PENDENTE);
+                        existing.setAtivo(false);
+
+                        try {
+                            emailNotificationService.notificarAdminNovaSolicitacao(existing.getNome(), existing.getEmail());
+                            emailNotificationService.notificarUsuarioSolicitacaoRecebida(existing.getNome(), existing.getEmail());
+                        } catch (Exception e) {
+                            logger.warn("Erro ao enviar e-mails de notificação de reativação: {}", e.getMessage());
+                        }
                     }
                     return usuarioRepository.saveAndFlush(existing);
                 })

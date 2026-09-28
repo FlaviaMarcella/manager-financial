@@ -277,6 +277,10 @@ export class ApiService {
     return this.http.patch<Usuario>(`${this.baseUrl}/usuarios/${id}/rejeitar`, {});
   }
 
+  desativarUsuario(id: number): Observable<Usuario> {
+    return this.http.delete<Usuario>(`${this.baseUrl}/usuarios/${id}`);
+  }
+
   // Relatórios & Prestação de Contas
   getRelatorioEvento(eventoId: number): Observable<RelatorioEvento> {
     return this.http.get<RelatorioEvento>(`${this.baseUrl}/relatorios/eventos/${eventoId}`);

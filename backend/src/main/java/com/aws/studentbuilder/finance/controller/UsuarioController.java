@@ -63,4 +63,18 @@ public class UsuarioController {
     public ResponseEntity<UsuarioDTO> rejeitar(@PathVariable Long id) {
         return ResponseEntity.ok(usuarioService.rejeitarUsuario(id));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Remover / Desativar usuário do sistema (apenas ADMIN)")
+    public ResponseEntity<UsuarioDTO> desativar(@PathVariable Long id) {
+        return ResponseEntity.ok(usuarioService.desativarUsuario(id));
+    }
+
+    @PatchMapping("/{id}/desativar")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Desativar acesso de usuário (apenas ADMIN)")
+    public ResponseEntity<UsuarioDTO> desativarPatch(@PathVariable Long id) {
+        return ResponseEntity.ok(usuarioService.desativarUsuario(id));
+    }
 }
