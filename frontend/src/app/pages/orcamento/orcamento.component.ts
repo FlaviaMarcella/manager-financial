@@ -219,9 +219,16 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
                       <span class="user-pill">{{ t.usuarioNome }}</span>
                     </td>
                     <td style="text-align: right;">
-                      <button class="btn btn-sm btn-outline btn-view" (click)="openTransferDetailsModal(t)" title="Visualizar detalhes da transferência">
-                        👁️ Detalhes
-                      </button>
+                      <div class="action-buttons">
+                        <button class="btn btn-sm btn-outline btn-view" (click)="openTransferDetailsModal(t)" title="Visualizar detalhes da transferência">
+                          👁️ Detalhes
+                        </button>
+                        @if (authService.isAdmin()) {
+                          <button class="btn btn-sm btn-danger" (click)="desfazerTransferencia(t)" title="Desfazer e estornar transferência de saldo">
+                            ↩️ Desfazer
+                          </button>
+                        }
+                      </div>
                     </td>
                   </tr>
                 } @empty {
@@ -400,6 +407,11 @@ import { CurrencyBrlPipe } from '../../shared/pipes/currency-brl.pipe';
 
             <div class="modal-footer">
               <button type="button" class="btn btn-outline" (click)="closeTransferDetailsModal()">Fechar Detalhes</button>
+              @if (authService.isAdmin()) {
+                <button type="button" class="btn btn-danger" (click)="desfazerTransferencia(selectedTransferForDetails!); closeTransferDetailsModal()">
+                  ↩️ Desfazer Transferência
+                </button>
+              }
             </div>
           </div>
         </div>
@@ -1388,5 +1400,22 @@ export class OrcamentoComponent implements OnInit {
         this.toast.error(err.error?.message || 'Erro ao realizar transferência.');
       }
     });
+  }
+
+  desfazerTransferencia(t: TransferenciaOrcamento) {
+    if (!t.id) return;
+    const msg = `Deseja realmente desfazer a transferência de US$ ${t.valorUsd.toFixed(2)} (${t.categoriaOrigemNome} -> ${t.categoriaDestinoNome})?\n\nO saldo será estornado do evento "${t.eventoDestinoNome}" de volta para o evento "${t.eventoOrigemNome}".`;
+    if (confirm(msg)) {
+      this.apiService.desfazerTransferencia(t.id).subscribe({
+        next: () => {
+          this.toast.success('Transferência desfeita e saldo estornado com sucesso!');
+          this.loadItens();
+          this.loadTransferencias();
+        },
+        error: (err) => {
+          this.toast.error(err.error?.message || 'Erro ao desfazer transferência de saldo.');
+        }
+      });
+    }
   }
 }

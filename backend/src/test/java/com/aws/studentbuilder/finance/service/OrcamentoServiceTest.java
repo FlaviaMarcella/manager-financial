@@ -198,4 +198,74 @@ class OrcamentoServiceTest {
         assertEquals(new BigDecimal("220.00"), resultado.getValorBrl());
         assertEquals("Sobra de alimentação", resultado.getMotivo());
     }
+
+    @Test
+    @DisplayName("Deve desfazer transferência e estornar saldo com sucesso")
+    void deveDesfazerTransferenciaComSucesso() {
+        TransferenciaOrcamento transf = TransferenciaOrcamento.builder()
+                .id(10L)
+                .eventoOrigem(evento)
+                .categoriaOrigem(categoria)
+                .eventoDestino(eventoDestino)
+                .categoriaDestino(categoria)
+                .valorUsd(new BigDecimal("40.00"))
+                .taxaCambio(new BigDecimal("5.5000"))
+                .valorBrl(new BigDecimal("220.00"))
+                .motivo("Sobra de alimentação")
+                .build();
+
+        ItemOrcamento itemDestino = ItemOrcamento.builder()
+                .id(5L)
+                .evento(eventoDestino)
+                .categoria(categoria)
+                .descricao("Transferência de Sobra: " + evento.getNome())
+                .valorOrcadoUsd(new BigDecimal("40.00"))
+                .taxaCambioUsada(new BigDecimal("5.5000"))
+                .build();
+
+        when(transferenciaRepository.findById(10L)).thenReturn(Optional.of(transf));
+        when(itemOrcamentoRepository.findByEventoIdAndCategoriaId(2L, 1L)).thenReturn(List.of(itemDestino));
+        when(lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(2L, 1L)).thenReturn(BigDecimal.ZERO);
+        when(itemOrcamentoRepository.findByEventoIdAndCategoriaId(1L, 1L)).thenReturn(List.of(itemOrcamento));
+
+        orcamentoService.desfazerTransferencia(10L);
+
+        verify(itemOrcamentoRepository).delete(itemDestino);
+        verify(itemOrcamentoRepository).save(itemOrcamento);
+        verify(transferenciaRepository).delete(transf);
+        assertEquals(new BigDecimal("140.00"), itemOrcamento.getValorOrcadoUsd());
+    }
+
+    @Test
+    @DisplayName("Deve bloquear estorno quando o saldo de destino já foi consumido por gastos")
+    void deveBloquearDesfazerTransferenciaQuandoSaldoDestinoJaConsumido() {
+        TransferenciaOrcamento transf = TransferenciaOrcamento.builder()
+                .id(10L)
+                .eventoOrigem(evento)
+                .categoriaOrigem(categoria)
+                .eventoDestino(eventoDestino)
+                .categoriaDestino(categoria)
+                .valorUsd(new BigDecimal("40.00"))
+                .taxaCambio(new BigDecimal("5.5000"))
+                .valorBrl(new BigDecimal("220.00"))
+                .motivo("Sobra de alimentação")
+                .build();
+
+        ItemOrcamento itemDestino = ItemOrcamento.builder()
+                .id(5L)
+                .evento(eventoDestino)
+                .categoria(categoria)
+                .valorOrcadoUsd(new BigDecimal("40.00"))
+                .taxaCambioUsada(new BigDecimal("5.5000"))
+                .build();
+
+        when(transferenciaRepository.findById(10L)).thenReturn(Optional.of(transf));
+        when(itemOrcamentoRepository.findByEventoIdAndCategoriaId(2L, 1L)).thenReturn(List.of(itemDestino));
+        // Gastou 30 USD, sobram apenas 10 USD de saldo livre
+        when(lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(2L, 1L)).thenReturn(new BigDecimal("30.00"));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> orcamentoService.desfazerTransferencia(10L));
+        assertTrue(ex.getMessage().contains("Não é possível desfazer a transferência"));
+        verify(transferenciaRepository, never()).delete(any());
+    }
 }

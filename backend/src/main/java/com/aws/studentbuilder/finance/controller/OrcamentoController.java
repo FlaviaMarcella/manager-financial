@@ -77,6 +77,14 @@ public class OrcamentoController {
         return ResponseEntity.ok(orcamentoService.listarTransferencias(eventoId));
     }
 
+    @DeleteMapping("/transferencias/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Desfazer / estornar transferência de saldo entre eventos (apenas ADMIN)")
+    public ResponseEntity<Void> desfazerTransferencia(@PathVariable Long id) {
+        orcamentoService.desfazerTransferencia(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/eventos/{eventoId}/saldos-disponiveis")
     @PreAuthorize("hasAnyRole('ADMIN', 'VIEWER')")
     @Operation(summary = "Obter saldos disponíveis por categoria para um evento de origem")

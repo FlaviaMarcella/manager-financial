@@ -144,6 +144,10 @@ export class ApiService {
     return this.http.get<TransferenciaOrcamento[]>(`${this.baseUrl}/orcamento/transferencias`, { params });
   }
 
+  desfazerTransferencia(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/orcamento/transferencias/${id}`);
+  }
+
   getSaldosDisponiveis(eventoId: number): Observable<CategoriaSaldoDisponivel[]> {
     return this.http.get<CategoriaSaldoDisponivel[]>(`${this.baseUrl}/orcamento/eventos/${eventoId}/saldos-disponiveis`);
   }

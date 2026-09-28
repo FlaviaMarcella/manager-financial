@@ -230,6 +230,98 @@ public class OrcamentoService {
         return toTransferenciaDTO(salvo);
     }
 
+    @Transactional
+    public void desfazerTransferencia(Long transferenciaId) {
+        TransferenciaOrcamento transf = transferenciaRepository.findById(transferenciaId)
+                .orElseThrow(() -> new IllegalArgumentException("Transferência não encontrada com ID: " + transferenciaId));
+
+        Evento eventoOrigem = transf.getEventoOrigem();
+        Categoria categoriaOrigem = transf.getCategoriaOrigem();
+        Evento eventoDestino = transf.getEventoDestino();
+        Categoria categoriaDestino = transf.getCategoriaDestino();
+        BigDecimal valorUsd = transf.getValorUsd();
+
+        // 1. Validar se o evento de destino ainda possui saldo disponível suficiente para estorno
+        List<ItemOrcamento> itensDestino = itemOrcamentoRepository.findByEventoIdAndCategoriaId(
+                eventoDestino.getId(), categoriaDestino.getId()
+        );
+
+        BigDecimal totalOrcadoDestinoUsd = itensDestino.stream()
+                .map(ItemOrcamento::getValorOrcadoUsd)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal taxaDestino = !itensDestino.isEmpty() && itensDestino.get(0).getTaxaCambioUsada() != null
+                ? itensDestino.get(0).getTaxaCambioUsada()
+                : (transf.getTaxaCambio() != null ? transf.getTaxaCambio() : configService.getTaxaCambioAtual());
+
+        BigDecimal gastoDestinoUsd = lancamentoRepository.sumGastoUsdByEventoIdAndCategoriaId(
+                eventoDestino.getId(), categoriaDestino.getId()
+        );
+        if (gastoDestinoUsd == null) {
+            BigDecimal gastoDestinoBrl = lancamentoRepository.sumGastoBrlByEventoIdAndCategoriaId(
+                    eventoDestino.getId(), categoriaDestino.getId()
+            );
+            gastoDestinoUsd = (gastoDestinoBrl != null && taxaDestino.compareTo(BigDecimal.ZERO) > 0)
+                    ? gastoDestinoBrl.divide(taxaDestino, 2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+        }
+
+        BigDecimal saldoDisponivelDestinoUsd = totalOrcadoDestinoUsd.subtract(gastoDestinoUsd).setScale(2, RoundingMode.HALF_UP);
+
+        if (valorUsd.compareTo(saldoDisponivelDestinoUsd) > 0) {
+            throw new IllegalStateException(String.format(
+                    "Não é possível desfazer a transferência: o saldo transferido já foi consumido por despesas no evento de destino (%s). " +
+                    "Saldo disponível no destino: US$ %.2f (Necessário para estorno: US$ %.2f)",
+                    eventoDestino.getNome(), saldoDisponivelDestinoUsd, valorUsd
+            ));
+        }
+
+        // 2. Deduzir o valor transferido do(s) item(ns) de destino
+        BigDecimal restanteADeduzir = valorUsd;
+        for (ItemOrcamento itemDestino : itensDestino) {
+            if (restanteADeduzir.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal valorItem = itemDestino.getValorOrcadoUsd();
+            if (valorItem.compareTo(restanteADeduzir) >= 0) {
+                itemDestino.setValorOrcadoUsd(valorItem.subtract(restanteADeduzir));
+                restanteADeduzir = BigDecimal.ZERO;
+            } else {
+                itemDestino.setValorOrcadoUsd(BigDecimal.ZERO);
+                restanteADeduzir = restanteADeduzir.subtract(valorItem);
+            }
+
+            if (itemDestino.getValorOrcadoUsd().compareTo(BigDecimal.ZERO) == 0 &&
+                itemDestino.getDescricao() != null && itemDestino.getDescricao().contains("Transferência de Sobra")) {
+                itemOrcamentoRepository.delete(itemDestino);
+            } else {
+                itemOrcamentoRepository.save(itemDestino);
+            }
+        }
+
+        // 3. Devolver o saldo para o(s) item(ns) de origem
+        List<ItemOrcamento> itensOrigem = itemOrcamentoRepository.findByEventoIdAndCategoriaId(
+                eventoOrigem.getId(), categoriaOrigem.getId()
+        );
+
+        if (!itensOrigem.isEmpty()) {
+            ItemOrcamento itemOrigem = itensOrigem.get(0);
+            itemOrigem.setValorOrcadoUsd(itemOrigem.getValorOrcadoUsd().add(valorUsd));
+            itemOrcamentoRepository.save(itemOrigem);
+        } else {
+            ItemOrcamento itemOrigem = ItemOrcamento.builder()
+                    .evento(eventoOrigem)
+                    .categoria(categoriaOrigem)
+                    .descricao("Saldo Revertido de Transferência")
+                    .valorOrcadoUsd(valorUsd)
+                    .taxaCambioUsada(transf.getTaxaCambio() != null ? transf.getTaxaCambio() : configService.getTaxaCambioAtual())
+                    .observacoes("Estorno da transferência de sobra #" + transf.getId())
+                    .build();
+            itemOrcamentoRepository.save(itemOrigem);
+        }
+
+        // 4. Remover o registro de transferência
+        transferenciaRepository.delete(transf);
+    }
+
     @Transactional(readOnly = true)
     public List<TransferenciaOrcamentoDTO> listarTransferencias(Long eventoId) {
         return transferenciaRepository.findByEventoId(eventoId).stream()
