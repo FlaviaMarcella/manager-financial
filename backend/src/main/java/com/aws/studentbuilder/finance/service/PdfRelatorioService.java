@@ -328,39 +328,41 @@ public class PdfRelatorioService {
 
     private byte[] criarPaginaComprovanteImagem(Resource resource, String originalName, Lancamento l, int index) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            Document doc = new Document(PageSize.A4, 28, 28, 30, 30);
+            // Margens otimizadas de 20pt para maximizar a área de visualização do comprovante
+            Document doc = new Document(PageSize.A4, 20, 20, 20, 20);
             PdfWriter writer = PdfWriter.getInstance(doc, baos);
             doc.open();
 
-            // Header do Comprovante
-            PdfPTable header = new PdfPTable(1);
-            header.setWidthPercentage(100);
-            PdfPCell cell = new PdfPCell();
-            cell.setBackgroundColor(COLOR_SECTION_BG);
-            cell.setBorderColor(COLOR_BORDER);
-            cell.setPadding(8);
+            // Tabela container que mantém o cabeçalho e a imagem estritamente juntos na mesma página
+            PdfPTable containerTable = new PdfPTable(1);
+            containerTable.setWidthPercentage(100);
+            containerTable.setKeepTogether(true);
 
-            Font fTitle = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, COLOR_NAVY);
+            // 1. Bloco de Cabeçalho do Comprovante
+            PdfPCell headerCell = new PdfPCell();
+            headerCell.setBackgroundColor(COLOR_SECTION_BG);
+            headerCell.setBorderColor(COLOR_BORDER);
+            headerCell.setPadding(6);
+
+            Font fTitle = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9.5f, COLOR_NAVY);
             Font fSub = FontFactory.getFont(FontFactory.HELVETICA, 8, COLOR_NAVY_LIGHT);
             Font fMuted = FontFactory.getFont(FontFactory.HELVETICA, 7.5f, COLOR_TEXT_MUTED);
 
-            cell.addElement(new Paragraph(String.format("ANEXO DE COMPROVANTE #%02d — %s", index, originalName != null ? originalName : "Comprovante"), fTitle));
-            cell.addElement(new Paragraph(String.format("Lançamento: %s | Fornecedor: %s | Valor: R$ %s (US$ %s)",
-                    l.getDescricao(),
-                    l.getFornecedor(),
+            headerCell.addElement(new Paragraph(String.format("ANEXO DE COMPROVANTE #%02d — %s", index, originalName != null ? originalName : "Comprovante"), fTitle));
+            headerCell.addElement(new Paragraph(String.format("Lançamento: %s | Fornecedor: %s | Valor: R$ %s (US$ %s)",
+                    l.getDescricao() != null ? l.getDescricao() : "—",
+                    l.getFornecedor() != null ? l.getFornecedor() : "—",
                     BRL_FORMAT.format(l.getValorBrl()),
                     USD_FORMAT.format(l.getValorUsd() != null ? l.getValorUsd() : BigDecimal.ZERO)
             ), fSub));
-            cell.addElement(new Paragraph(String.format("Data do Pagamento: %s | Nº NF: %s",
+            headerCell.addElement(new Paragraph(String.format("Data do Pagamento: %s | Nº NF: %s",
                     l.getData() != null ? l.getData().format(DATE_FORMAT) : "N/D",
                     l.getNumeroNotaFiscal() != null && !l.getNumeroNotaFiscal().isBlank() ? l.getNumeroNotaFiscal() : "Não informada"
             ), fMuted));
 
-            header.addCell(cell);
-            header.setSpacingAfter(10);
-            doc.add(header);
+            containerTable.addCell(headerCell);
 
-            // Carrega e escala a imagem proporcionalmente
+            // 2. Carregamento e dimensionamento preciso da Imagem
             byte[] imgBytes;
             try (InputStream in = resource.getInputStream()) {
                 imgBytes = in.readAllBytes();
@@ -368,11 +370,25 @@ public class PdfRelatorioService {
             Image image = Image.getInstance(imgBytes);
             image.setAlignment(Element.ALIGN_CENTER);
 
-            float maxWidth = PageSize.A4.getWidth() - 56;  // Margens 28 de cada lado
-            float maxHeight = PageSize.A4.getHeight() - 110; // Espaço restante da página
+            // A4: 595.28 x 841.89
+            // Largura útil: 595.28 - 40 = 555.28 pt
+            // Altura útil: 841.89 - 40 = 801.89 pt
+            // O cabeçalho ocupa ~65 pt. Altura máxima para imagem garantindo que NUNCA estoure a página: 660 pt
+            float maxWidth = PageSize.A4.getWidth() - 44f;
+            float maxHeight = PageSize.A4.getHeight() - 150f;
             image.scaleToFit(maxWidth, maxHeight);
 
-            doc.add(image);
+            // 3. Célula da Imagem
+            PdfPCell imageCell = new PdfPCell();
+            imageCell.setBorder(Rectangle.NO_BORDER);
+            imageCell.setPaddingTop(8);
+            imageCell.setPaddingBottom(4);
+            imageCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            imageCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            imageCell.addElement(image);
+            containerTable.addCell(imageCell);
+
+            doc.add(containerTable);
             doc.close();
             return baos.toByteArray();
         } catch (Exception e) {
